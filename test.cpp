@@ -17,37 +17,45 @@ bool good(int n, int alpha) {
   for (int i = 0; i < n; i++) {
     a[i] = rng() % alpha + 1;
   }
+  auto b = parlay::sequence<unsigned int>(n * 2);
+  for (int i = 0; i < n; i++) {
+    b[i] = b[i + n] = a[i];
+    if (rng() % 100 < 100) {
+      b[i + n] = rng() % alpha + 1;
+    }
+  }
   parlay::internal::timer tt;
   tt.start();
-  auto [rank1, sa1, lcp1] = suffix_array_large_alphabet(a);
+  auto [rank1, sa1, lcp1] = suffix_array_large_alphabet(b);
   cout << tt.next_time() << endl;
-  auto [rank2, sa2, lcp2] = DC3(a);
+  auto [rank2, sa2, lcp2] = DC3(b);
   cout << tt.stop() << endl;
-  for (int i = 0; i < n; i++) {
-    if (sa1[i] != sa2[i]) return false;
+  for (int i = 0; i < n * 2; i++) {
+    if (sa1[i] != sa2[i] || rank1[i] != rank2[i] || lcp1[i] != lcp2[i])
+      return false;
   }
   return true;
 }
 
 int main() {
-  // int n = 100000;
-  // parlay::sequence<unsigned int> a(n);
-  // for (int i = 0; i < n; i++) {
-  //   a[i] = rng() % 200000000;
-  // }
-  // auto b = a;
-  // parlay::internal::timer tt;
-  // parlay::stable_sort_inplace(a);
-  // cout << tt.next_time() << endl;
-  // parlay::stable_integer_sort_inplace(parlay::make_slice(b),
-  //                                     [&](unsigned int x) { return x; });
-  // cout << tt.stop() << endl;
-  // for (int i = 0; i < n; i++) {
-  //   assert(a[i] == b[i]);
-  // }
-  // cout << "Sorting test pass!" << endl;
+  int n = 10000000;
+  parlay::sequence<unsigned int> a(n);
+  for (int i = 0; i < n; i++) {
+    a[i] = rng() % 200000000;
+  }
+  auto b = a;
+  parlay::internal::timer tt;
+  parlay::stable_sort_inplace(a);
+  cout << tt.next_time() << endl;
+  parlay::stable_integer_sort_inplace(parlay::make_slice(b),
+                                      [&](unsigned int x) { return x; });
+  cout << tt.stop() << endl;
+  for (int i = 0; i < n; i++) {
+    assert(a[i] == b[i]);
+  }
+  cout << "Sorting test pass!" << endl;
 
-  good(1000000, 2);
+  good(1000000, 1000000);
   cout << "SA test pass!" << endl;
 
   // parlay::sequence<unsigned int> a = {1,3,5,7,1};

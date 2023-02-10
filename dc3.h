@@ -84,9 +84,7 @@ parlay::sequence<unsigned int> DC3_internal_(const Seq& s, int dep = 0) {
 }  // namespace
 
 template <typename Seq>
-std::tuple<parlay::sequence<unsigned int>, parlay::sequence<unsigned int>,
-           parlay::sequence<unsigned int>>
-DC3(const Seq& s) {
+auto DC3(const Seq& s) {
   auto n = s.size();
   auto sa = DC3_internal_(s);
   auto rank = parlay::sequence<unsigned int>(n);
@@ -95,7 +93,7 @@ DC3(const Seq& s) {
   auto lcp = parlay::sequence<unsigned int>(n);
   lcp[0] = 0;
   parlay::copy(height, parlay::make_slice(lcp.begin() + 1, lcp.end()));
-  return {rank, sa, lcp};
+  return std::make_tuple(rank, sa, lcp);
 }
 
 #endif  // DC3_H_

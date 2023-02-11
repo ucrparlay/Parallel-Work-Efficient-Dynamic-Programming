@@ -4,23 +4,19 @@
 #include <iostream>
 #include <tuple>
 
-#include "debug.h"
 #include "parlay/internal/get_time.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
-#include "suffix_array_parallel.h"
-
-namespace {
+#include "parlaylib/examples/suffix_array.h"
 
 // 0 < s[i] <= s.size()
 template <typename Seq>
-parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
+parlay::sequence<unsigned int> DC3(const Seq& s) {
   auto n = s.size();
   assert(*parlay::min_element(s) > 0);
   assert(*parlay::max_element(s) <= n);
-  if (n <= 10000) {
-    auto [rank, sa, lcp] = suffix_array_small_alphabet(s);
-    return sa;
+  if (n <= 100) {
+    return suffix_array(s);
   }
   auto m = n;
   while (m % 3) m++;
@@ -46,7 +42,7 @@ parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
       a12[i] = tao[i * 3 + 1];
       a12[i + m / 3] = tao[i * 3 + 2];
     });
-    a12 = DC3_internal_(a12);
+    a12 = DC3(a12);
     parlay::parallel_for(0, a12.size(), [&](auto i) {
       if (a12[i] < m / 3) {
         a12[i] = a12[i] * 3 + 1;
@@ -61,7 +57,7 @@ parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
   parlay::parallel_for(0, m / 3, [&](auto i) { a0[i] = i * 3; });
   parlay::stable_integer_sort_inplace(a0, [&](auto i) { return rank[i + 1]; });
   parlay::stable_integer_sort_inplace(a0, [&](auto i) { return ss[i]; });
-  auto fff = [&](auto i, auto j) {
+  auto cmp = [&](auto i, auto j) {
     assert(i % 3 == 0 && j % 3 > 0);  // i from a0 and j from a12
     if (j % 3 == 1) {
       if (ss[i] != ss[j]) return ss[i] < ss[j];
@@ -74,24 +70,9 @@ parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
   };
   auto a = parlay::merge(a0, a12, [&](auto i, auto j) {
     // parlay::merge is reversed
-    return !fff(j, i);
+    return !cmp(j, i);
   });
   return parlay::filter(a, [&](auto i) { return i < n; });
-}
-
-}  // namespace
-
-template <typename Seq>
-auto DC3(const Seq& s) {
-  auto n = s.size();
-  auto sa = DC3_internal_(s);
-  auto rank = parlay::sequence<unsigned int>(n);
-  parlay::parallel_for(0, n, [&](auto i) { rank[sa[i]] = i; });
-  auto height = lcp(s, sa);
-  auto lcp = parlay::sequence<unsigned int>(n);
-  lcp[0] = 0;
-  parlay::copy(height, parlay::make_slice(lcp.begin() + 1, lcp.end()));
-  return std::make_tuple(rank, sa, lcp);
 }
 
 #endif  // DC3_H_

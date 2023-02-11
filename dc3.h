@@ -12,13 +12,13 @@
 
 namespace {
 
-// return (ranks, sa, lcp)
+// 0 < s[i] <= s.size()
 template <typename Seq>
 parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
   auto n = s.size();
   assert(*parlay::min_element(s) > 0);
   assert(*parlay::max_element(s) <= n);
-  if (n <= 100) {
+  if (n <= 10000) {
     auto [rank, sa, lcp] = suffix_array_small_alphabet(s);
     return sa;
   }
@@ -62,7 +62,7 @@ parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
   parlay::stable_integer_sort_inplace(a0, [&](auto i) { return rank[i + 1]; });
   parlay::stable_integer_sort_inplace(a0, [&](auto i) { return ss[i]; });
   auto fff = [&](auto i, auto j) {
-    assert(i % 3 == 0 && j % 3 > 0);
+    assert(i % 3 == 0 && j % 3 > 0);  // i from a0 and j from a12
     if (j % 3 == 1) {
       if (ss[i] != ss[j]) return ss[i] < ss[j];
       return rank[i + 1] < rank[j + 1];
@@ -72,7 +72,10 @@ parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
       return rank[i + 2] < rank[j + 2];
     }
   };
-  auto a = parlay::merge(a0, a12, [&](auto i, auto j) { return !fff(j, i); });
+  auto a = parlay::merge(a0, a12, [&](auto i, auto j) {
+    // parlay::merge is reversed
+    return !fff(j, i);
+  });
   return parlay::filter(a, [&](auto i) { return i < n; });
 }
 

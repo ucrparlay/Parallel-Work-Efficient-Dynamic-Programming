@@ -60,7 +60,7 @@ int main() {
   }
   cout << "Sorting test pass!" << endl;
 
-  assert(good(100000, 100000));
+  assert(good(1000000, 1000000));
   cout << "SA test pass!" << endl;
 
   return 0;

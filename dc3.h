@@ -14,57 +14,52 @@ namespace {
 
 // return (ranks, sa, lcp)
 template <typename Seq>
-parlay::sequence<unsigned int> DC3_internal_(const Seq& s, int dep = 0) {
+parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
   assert(*parlay::min_element(s) > 0);
   auto n = s.size();
-  if (n <= 100000) {
+  if (n <= 100) {
     auto [rank, sa, lcp] = suffix_array_large_alphabet(s);
     return sa;
   }
-  auto m = n + 3;
+  auto m = n;
   while (m % 3) m++;
-  auto ss = parlay::tabulate(m, [&](auto i) { return i < n ? s[i] : 0; });
-  auto s12 = parlay::sequence<unsigned int>(m / 3 * 2, 0);
+  auto ss = parlay::tabulate(m + 3, [&](auto i) { return i < n ? s[i] : 0; });
+  auto a12 = parlay::sequence<unsigned int>(m / 3 * 2, 0);
   parlay::parallel_for(0, m, [&](auto i) {
-    if (i % 3) s12[(i / 3) * 2 + i % 3 - 1] = i;
+    if (i % 3) a12[(i / 3) * 2 + i % 3 - 1] = i;
   });
-  parlay::stable_integer_sort_inplace(s12, [&](auto i) { return ss[i + 2]; });
-  parlay::stable_integer_sort_inplace(s12, [&](auto i) { return ss[i + 1]; });
-  parlay::stable_integer_sort_inplace(s12, [&](auto i) { return ss[i]; });
-  auto same = parlay::tabulate(s12.size(), [&](auto i) {
+  parlay::stable_integer_sort_inplace(a12, [&](auto i) { return ss[i + 2]; });
+  parlay::stable_integer_sort_inplace(a12, [&](auto i) { return ss[i + 1]; });
+  parlay::stable_integer_sort_inplace(a12, [&](auto i) { return ss[i]; });
+  auto same = parlay::tabulate(a12.size(), [&](auto i) -> unsigned int {
     if (i == 0) return 1u;
-    for (int k = 0; k < 3; k++) {
-      if (ss[s12[i] + k] != ss[s12[i - 1] + k]) {
-        return 1u;
-      }
-    }
-    return 0u;
+    auto p = a12[i], q = a12[i - 1];
+    return ss[p] != ss[q] || ss[p + 1] != ss[q + 1] || ss[p + 2] != ss[q + 2];
   });
   auto sum = parlay::scan_inclusive(same);
-  auto tao = parlay::sequence<unsigned int>(m);
-  parlay::parallel_for(0, m / 3 * 2, [&](auto i) { tao[s12[i]] = sum[i]; });
-  parlay::parallel_for(0, m, [&](auto i) {
-    if (i % 3 == 1) {
-      s12[i / 3] = tao[i];
-    } else if (i % 3 == 2) {
-      s12[i / 3 + m / 3] = tao[i];
-    }
-  });
-  auto sa12 = DC3_internal_(s12, dep + 1);  // recursive call
-  parlay::parallel_for(0, sa12.size(), [&](auto i) {
-    if (sa12[i] < m / 3) {
-      sa12[i] = sa12[i] * 3 + 1;
-    } else {
-      sa12[i] = (sa12[i] - m / 3) * 3 + 2;
-    }
-  });
-  auto& rank = tao;
-  parlay::parallel_for(0, sa12.size(), [&](auto i) { rank[sa12[i]] = i; });
-  auto sa0 = parlay::sequence<unsigned int>(m / 3);
-  parlay::parallel_for(0, m / 3, [&](auto i) { sa0[i] = i * 3; });
-  parlay::stable_integer_sort_inplace(sa0, [&](auto i) { return rank[i + 1]; });
-  parlay::stable_integer_sort_inplace(sa0, [&](auto i) { return ss[i]; });
-  parlay::parallel_for(0, m / 3, [&](auto i) { rank[sa0[i]] = i; });
+  // if can not sort by 3 characters, call DC3 recursively
+  if (sum.back() < sum.size()) {
+    auto tao = parlay::sequence<unsigned int>(m);
+    parlay::parallel_for(0, a12.size(), [&](auto i) { tao[a12[i]] = sum[i]; });
+    parlay::parallel_for(0, m / 3, [&](auto i) {
+      a12[i] = tao[i * 3 + 1];
+      a12[i + m / 3] = tao[i * 3 + 2];
+    });
+    a12 = DC3_internal_(a12);
+    parlay::parallel_for(0, a12.size(), [&](auto i) {
+      if (a12[i] < m / 3) {
+        a12[i] = a12[i] * 3 + 1;
+      } else {
+        a12[i] = (a12[i] - m / 3) * 3 + 2;
+      }
+    });
+  }
+  auto rank = parlay::sequence<unsigned int>(m);
+  parlay::parallel_for(0, a12.size(), [&](auto i) { rank[a12[i]] = i; });
+  auto a0 = parlay::sequence<unsigned int>(m / 3);
+  parlay::parallel_for(0, m / 3, [&](auto i) { a0[i] = i * 3; });
+  parlay::stable_integer_sort_inplace(a0, [&](auto i) { return rank[i + 1]; });
+  parlay::stable_integer_sort_inplace(a0, [&](auto i) { return ss[i]; });
   auto fff = [&](auto i, auto j) {
     assert(i % 3 == 0 && j % 3 > 0);
     if (j % 3 == 1) {
@@ -76,9 +71,8 @@ parlay::sequence<unsigned int> DC3_internal_(const Seq& s, int dep = 0) {
       return rank[i + 2] < rank[j + 2];
     }
   };
-  auto sa =
-      parlay::merge(sa0, sa12, [&](auto i, auto j) { return !fff(j, i); });
-  return parlay::filter(sa, [&](auto i) { return i < n; });
+  auto a = parlay::merge(a0, a12, [&](auto i, auto j) { return !fff(j, i); });
+  return parlay::filter(a, [&](auto i) { return i < n; });
 }
 
 }  // namespace

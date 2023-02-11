@@ -20,25 +20,30 @@ bool good(int n, int alpha) {
   auto b = parlay::sequence<unsigned int>(n * 2);
   for (int i = 0; i < n; i++) {
     b[i] = b[i + n] = a[i];
-    if (rng() % 100 < 100) {
+    if (rng() % 100 == 0) {
       b[i + n] = rng() % alpha + 1;
     }
   }
-  parlay::internal::timer tt;
-  tt.start();
-  auto [rank1, sa1, lcp1] = suffix_array_large_alphabet(b);
-  cout << tt.next_time() << endl;
-  auto [rank2, sa2, lcp2] = DC3(b);
-  cout << tt.stop() << endl;
-  for (int i = 0; i < n * 2; i++) {
-    if (sa1[i] != sa2[i] || rank1[i] != rank2[i] || lcp1[i] != lcp2[i])
-      return false;
+  double x = 0, y = 0;
+  for (int rr = 0; rr < 5; rr++) {
+    parlay::internal::timer tt;
+    auto [rank1, sa1, lcp1] = suffix_array_large_alphabet(b);
+    x += tt.next_time();
+    auto [rank2, sa2, lcp2] = DC3(b);
+    y += tt.stop();
+    if (rr > 0) continue;
+    for (int i = 0; i < n * 2; i++) {
+      if (sa1[i] != sa2[i] || rank1[i] != rank2[i] || lcp1[i] != lcp2[i])
+        return false;
+    }
   }
+  x /= 5, y /= 5;
+  cout << x << endl << y << endl << "rate: " << y / x << endl;
   return true;
 }
 
 int main() {
-  int n = 10000000;
+  int n = 1000000;
   parlay::sequence<unsigned int> a(n);
   for (int i = 0; i < n; i++) {
     a[i] = rng() % 200000000;
@@ -55,7 +60,11 @@ int main() {
   }
   cout << "Sorting test pass!" << endl;
 
-  good(1000000, 1000000);
+  for (int i = 10000; i < 11000; i++) {
+    if (!good(i, 3)) {
+      abort();
+    }
+  }
   cout << "SA test pass!" << endl;
 
   // parlay::sequence<unsigned int> a = {1,3,5,7,1};

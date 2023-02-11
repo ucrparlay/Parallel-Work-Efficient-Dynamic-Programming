@@ -15,10 +15,11 @@ namespace {
 // return (ranks, sa, lcp)
 template <typename Seq>
 parlay::sequence<unsigned int> DC3_internal_(const Seq& s) {
-  assert(*parlay::min_element(s) > 0);
   auto n = s.size();
+  assert(*parlay::min_element(s) > 0);
+  assert(*parlay::max_element(s) <= n);
   if (n <= 100) {
-    auto [rank, sa, lcp] = suffix_array_large_alphabet(s);
+    auto [rank, sa, lcp] = suffix_array_small_alphabet(s);
     return sa;
   }
   auto m = n;

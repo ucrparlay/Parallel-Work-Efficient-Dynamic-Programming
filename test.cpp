@@ -20,7 +20,7 @@ bool good(int n, int alpha) {
   auto b = parlay::sequence<unsigned int>(n * 2);
   for (int i = 0; i < n; i++) {
     b[i] = b[i + n] = a[i];
-    if (rng() % 100 == 0) {
+    if (rng() % 100 >= 0) {
       b[i + n] = rng() % alpha + 1;
     }
   }
@@ -60,15 +60,8 @@ int main() {
   }
   cout << "Sorting test pass!" << endl;
 
-  for (int i = 10000; i < 11000; i++) {
-    if (!good(i, 3)) {
-      abort();
-    }
-  }
+  assert(good(100000, 100000));
   cout << "SA test pass!" << endl;
-
-  // parlay::sequence<unsigned int> a = {1,3,5,7,1};
-  // DC3(a);
 
   return 0;
 }

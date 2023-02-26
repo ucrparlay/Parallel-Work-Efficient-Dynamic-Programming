@@ -13,5 +13,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(parlaylib)
 
-add_executable(test test.cpp)
-target_link_libraries(test PUBLIC parlay)
+add_executable(dc3_test dc3_test.cpp)
+target_link_libraries(dc3_test PUBLIC parlay)

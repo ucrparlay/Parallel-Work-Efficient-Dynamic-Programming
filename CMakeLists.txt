@@ -11,7 +11,12 @@ project(
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+add_subdirectory(gflags)
+add_subdirectory(glog)
 add_subdirectory(parlaylib)
 
+configure_file(dc3_config.h.in dc3_config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 add_executable(dc3_test dc3_test.cpp)
-target_link_libraries(dc3_test PUBLIC parlay)
+target_link_libraries(dc3_test PRIVATE parlay gflags::gflags glog::glog)

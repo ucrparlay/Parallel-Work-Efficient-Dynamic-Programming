@@ -21,6 +21,7 @@ bool TestDC3(int n, int alpha) {
   }
   double x = 0, y = 0;
   for (int rr = 0; rr < 5; rr++) {
+    LOG(INFO) << "round: " << rr << endl;
     parlay::internal::timer tt;
     auto sa1 = suffix_array(a);
     x += tt.stop();
@@ -33,17 +34,18 @@ bool TestDC3(int n, int alpha) {
     }
   }
   x /= 5, y /= 5;
-  LOG(INFO) << "parlay SA:" << x << endl;
+  LOG(INFO) << "parlay SA: " << x << endl;
   LOG(INFO) << "DC3: " << y << endl;
   LOG(INFO) << "rate: " << y / x << endl;
   return true;
 }
 
 DEFINE_int32(n, 10000, "n");
+DEFINE_validator(n, [](const char* flagname, int n) { return n > 0; });
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  FLAGS_log_dir = CMAKE_CURRENT_SOURCE_DIR"/logs";
+  FLAGS_log_dir = CMAKE_CURRENT_SOURCE_DIR "/logs";
   FLAGS_alsologtostderr = 1;
   google::InitGoogleLogging(argv[0]);
   CHECK(TestDC3(FLAGS_n, 128));

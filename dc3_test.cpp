@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
   FLAGS_log_dir = CMAKE_CURRENT_SOURCE_DIR "/logs";
   FLAGS_alsologtostderr = 1;
   google::InitGoogleLogging(argv[0]);
-  CHECK(TestDC3(FLAGS_n, 128));
+  CHECK(TestDC3(FLAGS_n, min(128, FLAGS_n)));
   LOG(INFO) << "Test Pass!" << endl;
   return 0;
 }

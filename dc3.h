@@ -33,11 +33,11 @@ parlay::sequence<unsigned int> DC3(const Seq& s) {
     auto p = a12[i], q = a12[i - 1];
     return ss[p] != ss[q] || ss[p + 1] != ss[q + 1] || ss[p + 2] != ss[q + 2];
   });
-  auto sum = parlay::scan_inclusive(same);
+  auto sum = parlay::scan_inclusive_inplace(same);
   // if can not sort by 3 characters, call DC3 recursively
-  if (sum.back() < sum.size()) {
+  if (sum < m / 3 * 2) {
     auto tao = parlay::sequence<unsigned int>(m);
-    parlay::parallel_for(0, a12.size(), [&](auto i) { tao[a12[i]] = sum[i]; });
+    parlay::parallel_for(0, a12.size(), [&](auto i) { tao[a12[i]] = same[i]; });
     parlay::parallel_for(0, m / 3, [&](auto i) {
       a12[i] = tao[i * 3 + 1];
       a12[i + m / 3] = tao[i * 3 + 2];
@@ -69,7 +69,7 @@ parlay::sequence<unsigned int> DC3(const Seq& s) {
     }
   };
   auto a = parlay::merge(a0, a12, [&](auto i, auto j) {
-    // parlay::merge is reversed
+    // the cmp parlay::merge is reversed
     return !cmp(j, i);
   });
   return parlay::filter(a, [&](auto i) { return i < n; });

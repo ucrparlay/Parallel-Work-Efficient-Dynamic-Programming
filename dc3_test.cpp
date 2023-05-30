@@ -28,9 +28,11 @@ bool TestDC3(int n, int alpha) {
     tt.start();
     auto sa2 = DC3(a);
     y += tt.stop();
-    if (rr > 0) continue;
+    if (rr > 0)
+      continue;
     for (int i = 0; i < n; i++) {
-      if (sa1[i] != sa2[i]) return false;
+      if (sa1[i] != sa2[i])
+        return false;
     }
   }
   x /= 5, y /= 5;
@@ -41,9 +43,9 @@ bool TestDC3(int n, int alpha) {
 }
 
 DEFINE_int32(n, 10000, "n");
-DEFINE_validator(n, [](const char* flagname, int n) { return n > 0; });
+DEFINE_validator(n, [](const char *flagname, int n) { return n > 0; });
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   FLAGS_log_dir = CMAKE_CURRENT_SOURCE_DIR "/logs";
   FLAGS_alsologtostderr = 1;

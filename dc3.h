@@ -10,7 +10,8 @@
 #include "parlaylib/examples/suffix_array.h"
 
 // 0 < s[i] <= s.size()
-template <typename Seq> parlay::sequence<unsigned int> DC3(const Seq &s) {
+template <typename Seq>
+parlay::sequence<unsigned int> DC3(const Seq &s) {
   auto n = s.size();
   assert(*parlay::min_element(s) > 0);
   assert(*parlay::max_element(s) <= n);
@@ -18,20 +19,17 @@ template <typename Seq> parlay::sequence<unsigned int> DC3(const Seq &s) {
     return suffix_array(s);
   }
   auto m = n;
-  while (m % 3)
-    m++;
+  while (m % 3) m++;
   auto ss = parlay::tabulate(m + 3, [&](auto i) { return i < n ? s[i] : 0; });
   auto a12 = parlay::sequence<unsigned int>(m / 3 * 2, 0);
   parlay::parallel_for(0, m, [&](auto i) {
-    if (i % 3)
-      a12[(i / 3) * 2 + i % 3 - 1] = i;
+    if (i % 3) a12[(i / 3) * 2 + i % 3 - 1] = i;
   });
   parlay::stable_integer_sort_inplace(a12, [&](auto i) { return ss[i + 2]; });
   parlay::stable_integer_sort_inplace(a12, [&](auto i) { return ss[i + 1]; });
   parlay::stable_integer_sort_inplace(a12, [&](auto i) { return ss[i]; });
   auto same = parlay::tabulate(a12.size(), [&](auto i) -> unsigned int {
-    if (i == 0)
-      return 1u;
+    if (i == 0) return 1u;
     auto p = a12[i], q = a12[i - 1];
     return ss[p] != ss[q] || ss[p + 1] != ss[q + 1] || ss[p + 2] != ss[q + 2];
   });
@@ -60,16 +58,13 @@ template <typename Seq> parlay::sequence<unsigned int> DC3(const Seq &s) {
   parlay::stable_integer_sort_inplace(a0, [&](auto i) { return rank[i + 1]; });
   parlay::stable_integer_sort_inplace(a0, [&](auto i) { return ss[i]; });
   auto cmp = [&](auto i, auto j) {
-    assert(i % 3 == 0 && j % 3 > 0); // i from a0 and j from a12
+    assert(i % 3 == 0 && j % 3 > 0);  // i from a0 and j from a12
     if (j % 3 == 1) {
-      if (ss[i] != ss[j])
-        return ss[i] < ss[j];
+      if (ss[i] != ss[j]) return ss[i] < ss[j];
       return rank[i + 1] < rank[j + 1];
     } else {
-      if (ss[i] != ss[j])
-        return ss[i] < ss[j];
-      if (ss[i + 1] != ss[j + 1])
-        return ss[i + 1] < ss[j + 1];
+      if (ss[i] != ss[j]) return ss[i] < ss[j];
+      if (ss[i + 1] != ss[j + 1]) return ss[i + 1] < ss[j + 1];
       return rank[i + 2] < rank[j + 2];
     }
   };
@@ -80,4 +75,4 @@ template <typename Seq> parlay::sequence<unsigned int> DC3(const Seq &s) {
   return parlay::filter(a, [&](auto i) { return i < n; });
 }
 
-#endif // DC3_H_
+#endif  // DC3_H_

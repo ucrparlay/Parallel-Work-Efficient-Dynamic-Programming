@@ -28,11 +28,9 @@ bool TestDC3(int n, int alpha) {
     tt.start();
     auto sa2 = DC3(a);
     y += tt.stop();
-    if (rr > 0)
-      continue;
+    if (rr > 0) continue;
     for (int i = 0; i < n; i++) {
-      if (sa1[i] != sa2[i])
-        return false;
+      if (sa1[i] != sa2[i]) return false;
     }
   }
   x /= 5, y /= 5;

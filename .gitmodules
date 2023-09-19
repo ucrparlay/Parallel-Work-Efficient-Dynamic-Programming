@@ -1,9 +1,6 @@
 [submodule "parlaylib"]
 	path = parlaylib
 	url = https://github.com/cmuparlay/parlaylib.git
-[submodule "glog"]
-	path = glog
-	url = git@github.com:google/glog.git
 [submodule "gflags"]
 	path = gflags
 	url = git@github.com:gflags/gflags.git

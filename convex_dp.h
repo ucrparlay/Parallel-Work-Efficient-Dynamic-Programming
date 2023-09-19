@@ -29,14 +29,6 @@ struct BST {
     }
     tag[x] = 0;
   }
-
-  size_t GetBest(size_t tl, size_t tr, size_t i) {
-    size_t x = (tl + tr) / 2;
-    Pushdown(x, tl, tr);
-    if (x == i) return best[x];
-    if (i < x) return GetBest(tl, x - 1, i);
-    else return GetBest(x + 1, tr, i);
-  }
 };
 
 template <typename Seq, typename F, typename W>
@@ -47,28 +39,33 @@ void ConvexDP(size_t n, Seq& E, F f, W w) {
 
   BST bst(n + 1);
 
-  std::function<bool(size_t, size_t, size_t, size_t, size_t, size_t)>
-      HaveDependency = [&](size_t tl, size_t tr, size_t pl, size_t pr,
-                           size_t to, size_t Eto) {
-        if (tl > tr) return false;
-        if (tr < pl || tl > pr) return false;
+  std::function<void(size_t, size_t, size_t, size_t)> Visit =
+      [&](size_t tl, size_t tr, size_t pl, size_t pr) {
+        if (tl > tr) return;
+        if (tr < pl || tl > pr) return;
         size_t x = (tl + tr) / 2;
         bst.Pushdown(x, tl, tr);
         if (x < pl) {
-          return HaveDependency(x + 1, tr, pl, pr, to, Eto);
+          Visit(x + 1, tr, pl, pr);
         } else if (x > pr) {
-          return HaveDependency(tl, x - 1, pl, pr, to, Eto);
+          Visit(tl, x - 1, pl, pr);
         } else {
-          size_t bx = bst.best[x];
-          size_t Ex = f(E[bx]) + w(bx, x);
-          if (f(Ex) + w(x, to) < Eto) return true;
-          bool resl = false, resr = false;
-          parlay::parallel_do(
-              [&]() { resl = HaveDependency(tl, x - 1, pl, pr, to, Eto); },
-              [&]() { resr = HaveDependency(x + 1, tr, pl, pr, to, Eto); });
-          return resl || resr;
+          parlay::parallel_do([&]() { Visit(tl, x - 1, pl, pr); },
+                              [&]() { Visit(x + 1, tr, pl, pr); });
         }
       };
+
+  auto HaveDependency = [&](size_t now, size_t nxt) {
+    Visit(1, n, now + 1, nxt);
+    size_t bnxt = bst.best[nxt];
+    auto Enxt = f(E[bnxt]) + w(bnxt, nxt);
+    return parlay::any_of(parlay::iota(nxt - now - 1), [&](size_t i) {
+      i += now + 1;
+      size_t bi = bst.best[i];
+      auto Ei = f(E[bi]) + w(bi, i);
+      return f(Ei) + w(i, nxt) < Enxt;
+    });
+  };
 
   std::function<void(size_t, size_t, size_t, size_t, size_t, size_t)> Update =
       [&](size_t tl, size_t tr, size_t bl, size_t br, size_t pl, size_t pr) {
@@ -116,15 +113,12 @@ void ConvexDP(size_t n, Seq& E, F f, W w) {
     size_t to = now + 1;
     while (to < n) {
       size_t nxt = std::min(n, now + 2 * (to - now));
-      size_t bnxt = bst.GetBest(1, n, nxt);
-      auto Enxt = f(E[bnxt]) + w(bnxt, nxt);
-      if (HaveDependency(1, n, now + 1, nxt - 1, nxt, Enxt)) break;
+      if (HaveDependency(now, nxt)) break;
       else to = nxt;
     }
     step[to - now]++;
     parlay::parallel_for(now + 1, to + 1, [&](size_t j) {
       size_t i = bst.best[j];
-      assert(i <= now);
       E[j] = f(E[i]) + w(i, j);
     });
     Update(1, n, now + 1, to, to + 1, n);

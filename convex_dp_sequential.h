@@ -7,7 +7,7 @@
 #include "parlay/sequence.h"
 
 template <typename Seq, typename F, typename W>
-auto ConvexDPSequential(size_t n, Seq& E, F f, W w) {
+void ConvexDPSequential(size_t n, Seq& E, F f, W w) {
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
@@ -51,8 +51,6 @@ auto ConvexDPSequential(size_t n, Seq& E, F f, W w) {
     size_t t = que.empty() ? j + 1 : que.back()[2] + 1;
     if (t <= n) que.push_back({j, t, n});
   }
-
-  return E;
 }
 
 #endif  // CONVEX_DP_SEQUENTIAL_H_

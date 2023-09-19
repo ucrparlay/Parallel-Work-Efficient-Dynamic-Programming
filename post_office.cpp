@@ -3,6 +3,7 @@
 
 #include "brute_force_dp.h"
 #include "config.h"
+#include "convex_dp.h"
 #include "convex_dp_sequential.h"
 #include "gflags/gflags.h"
 #include "parlay/internal/get_time.h"
@@ -20,8 +21,8 @@ DEFINE_uint64(cost, 10, "cost");
 mt19937 rng(0);
 // mt19937 rng(chrono::high_resolution_clock::now().time_since_epoch().count());
 
-vector<uint64> MakeData(size_t n) {
-  vector<uint64> x(n + 1);
+auto MakeData(size_t n) {
+  parlay::sequence<uint64> x(n + 1);
   for (size_t i = 1; i <= n; i++) {
     x[i] = rng() % FLAGS_range;
   }
@@ -61,14 +62,24 @@ int main(int argc, char *argv[]) {
     return left + right;
   };
 
-  parlay::sequence<uint64> E(n + 1);
-  parlay::internal::timer tm;
-  BruteForceDP(n, E, f, w);
-  tm.next("brute-force");
+  parlay::sequence<uint64> E1(n + 1);
   parlay::sequence<uint64> E2(n + 1);
+  parlay::sequence<uint64> E3(n + 1);
+
+  parlay::internal::timer tm;
+  BruteForceDP(n, E1, f, w);
+  tm.next("brute-force");
+
   ConvexDPSequential(n, E2, f, w);
   tm.next("sequential");
-  assert(E == E2);
+
+  ConvexDP(n, E3, f, w);
+  tm.next("parallel");
+
+  bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {
+    return E1[i] == E2[i] && E2[i] == E3[i];
+  });
+  cout << "ok: " << ok << '\n';
 
   return 0;
 }

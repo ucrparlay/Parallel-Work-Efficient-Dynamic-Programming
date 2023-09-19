@@ -1,5 +1,5 @@
-#ifndef CONVEX_DP_H_
-#define CONVEX_DP_H_
+#ifndef CONVEX_DP_PARALLEL_H_
+#define CONVEX_DP_PARALLEL_H_
 
 #include <algorithm>
 #include <map>
@@ -32,7 +32,7 @@ struct BST {
 };
 
 template <typename Seq, typename F, typename W>
-void ConvexDP(size_t n, Seq& E, F f, W w) {
+void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
@@ -129,4 +129,4 @@ void ConvexDP(size_t n, Seq& E, F f, W w) {
   }
 }
 
-#endif  // CONVEX_DP_H_
+#endif  // CONVEX_DP_PARALLEL_H_

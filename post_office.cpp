@@ -3,7 +3,7 @@
 
 #include "brute_force_dp.h"
 #include "config.h"
-#include "convex_dp.h"
+#include "convex_dp_parallel.h"
 #include "convex_dp_sequential.h"
 #include "gflags/gflags.h"
 #include "parlay/internal/get_time.h"
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   ConvexDPSequential(n, E2, f, w);
   tm.next("sequential");
 
-  ConvexDP(n, E3, f, w);
+  ConvexDPParallel(n, E3, f, w);
   tm.next("parallel");
 
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {

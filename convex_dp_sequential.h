@@ -8,6 +8,7 @@
 
 template <typename Seq, typename F, typename W>
 void ConvexDPSequential(size_t n, Seq& E, F f, W w) {
+  std::cout << "ConvexDPSequential start" << std::endl;
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
@@ -18,8 +19,6 @@ void ConvexDPSequential(size_t n, Seq& E, F f, W w) {
     auto t2 = f(E[i2]) + w(i2, j);
     return t1 < t2;
   };
-
-  std::cout << "ConvexDPSequential start" << std::endl;
 
   std::deque<std::array<size_t, 3>> que = {{0, 1, n}};
   for (size_t j = 1; j <= n; j++) {
@@ -51,6 +50,7 @@ void ConvexDPSequential(size_t n, Seq& E, F f, W w) {
     size_t t = que.empty() ? j + 1 : que.back()[2] + 1;
     if (t <= n) que.push_back({j, t, n});
   }
+  std::cout << "ConvexDPSequential end" << std::endl;
 }
 
 #endif  // CONVEX_DP_SEQUENTIAL_H_

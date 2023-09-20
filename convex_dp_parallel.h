@@ -33,6 +33,7 @@ struct BST {
 
 template <typename Seq, typename F, typename W>
 void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
+  std::cout << "ConvexDPParallel start" << std::endl;
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
@@ -110,24 +111,33 @@ void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
 
   size_t now = 0;
   std::map<size_t, size_t> step;
+  parlay::internal::timer t1("t1", false);
+  parlay::internal::timer t2("t2", false);
   while (now < n) {
+    t1.start();
     size_t to = now + 1;
     while (to < n) {
       size_t nxt = std::min(n, now + 2 * (to - now));
       if (HaveDependency(now, nxt)) break;
       else to = nxt;
     }
+    t1.stop();
     step[to - now]++;
+    t2.start();
     parlay::parallel_for(now + 1, to + 1, [&](size_t j) {
       size_t i = bst.best[j];
       E[j] = f(E[i]) + w(i, j);
     });
     Update(1, n, now + 1, to, to + 1, n);
+    t2.stop();
     now = to;
   }
   for (auto [step, cnt] : step) {
     std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
   }
+  t1.total();
+  t2.total();
+  std::cout << "ConvexDPParallel end" << std::endl;
 }
 
 #endif  // CONVEX_DP_PARALLEL_H_

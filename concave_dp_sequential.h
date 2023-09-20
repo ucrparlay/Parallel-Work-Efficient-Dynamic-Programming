@@ -8,6 +8,7 @@
 
 template <typename Seq, typename F, typename W>
 void ConcaveDPSequential(size_t n, Seq& E, F f, W w) {
+  std::cout << "ConcaveDPSequential start" << std::endl;
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
@@ -50,6 +51,7 @@ void ConcaveDPSequential(size_t n, Seq& E, F f, W w) {
     size_t t = sta.empty() ? n : sta.top()[1] - 1;
     if (t >= j + 1) sta.push({j, j + 1, t});
   }
+  std::cout << "ConcaveDPSequential end" << std::endl;
 }
 
 #endif  // CONCAVE_DP_SEQUENTIAL_H_

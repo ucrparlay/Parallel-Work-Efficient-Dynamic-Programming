@@ -34,6 +34,8 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
     tag[x] = 0;
   };
 
+  const size_t granuality = 256;
+
   std::function<void(size_t, size_t, size_t, size_t)> Visit =
       [&](size_t tl, size_t tr, size_t pl, size_t pr) {
         if (tl > tr) return;
@@ -46,15 +48,19 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
           Visit(tl, x - 1, pl, pr);
         } else {
           E[x] = Go(best[x], x);
-          parlay::parallel_do([&]() { Visit(tl, x - 1, pl, pr); },
-                              [&]() { Visit(x + 1, tr, pl, pr); });
+          if (pr - pl > granuality) {
+            parlay::parallel_do([&]() { Visit(tl, x - 1, pl, pr); },
+                                [&]() { Visit(x + 1, tr, pl, pr); });
+          } else {
+            Visit(tl, x - 1, pl, pr);
+            Visit(x + 1, tr, pl, pr);
+          }
         }
       };
 
-  auto HaveDependency = [&](size_t now, size_t lst, size_t nxt) {
-    Visit(1, n, lst, nxt);
-    return parlay::any_of(parlay::iota(nxt - lst), [&](size_t i) {
-      i += lst;
+  auto HaveDependency = [&](size_t now, size_t nxt) {
+    return parlay::any_of(parlay::iota(nxt - now - 1), [&](size_t i) {
+      i += now + 1;
       return Go(i, i + 1) < E[i + 1];
     });
   };
@@ -89,8 +95,13 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
           auto i = it - a.begin() + bl;
           if (Go(i, x) < E[x]) {
             best[x] = i;
-            parlay::parallel_do([&]() { Update(tl, x - 1, i, br, pl, pr); },
-                                [&]() { Update(x + 1, tr, bl, i, pl, pr); });
+            if (br - bl > granuality || pr - pl > granuality) {
+              parlay::parallel_do([&]() { Update(tl, x - 1, i, br, pl, pr); },
+                                  [&]() { Update(x + 1, tr, bl, i, pl, pr); });
+            } else {
+              Update(tl, x - 1, i, br, pl, pr);
+              Update(x + 1, tr, bl, i, pl, pr);
+            }
           } else {
             Update(tl, x - 1, bl, br, pl, pr);
           }
@@ -99,28 +110,22 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
 
   size_t now = 0;
   std::map<size_t, size_t> step;
-  parlay::internal::timer t1("t1", false);
-  parlay::internal::timer t2("t2", false);
   while (now < n) {
-    t1.start();
-    size_t to = now + 1;
+    size_t to = now;
     while (to < n) {
-      size_t nxt = std::min(n, now + 2 * (to - now));
-      if (HaveDependency(now, to, nxt)) break;
+      size_t s = std::max(2 * (to - now), size_t(1));
+      size_t nxt = std::min(n, now + s);
+      Visit(1, n, to + 1, nxt);
+      if (HaveDependency(now, nxt)) break;
       else to = nxt;
     }
-    t1.stop();
     step[to - now]++;
-    t2.start();
     Update(1, n, now + 1, to, to + 1, n);
-    t2.stop();
     now = to;
   }
   for (auto [step, cnt] : step) {
     std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
   }
-  t1.total();
-  t2.total();
   std::cout << "ConcaveDPParallel end" << std::endl;
 }
 

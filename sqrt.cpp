@@ -79,5 +79,11 @@ int main(int argc, char *argv[]) {
   });
   cout << "ok: " << ok << endl;
 
+  for (size_t i = 1; i <= n; i++) {
+    if (abs(E2[i] - E3[i]) > 1e-7) {
+      cout << i << ' ' << E2[i] << ' ' << E3[i] << endl;
+    }
+  }
+
   return 0;
 }

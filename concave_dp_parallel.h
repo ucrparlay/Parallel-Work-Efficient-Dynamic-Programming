@@ -9,16 +9,19 @@
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
 
-struct BST {
-  size_t n;
-  parlay::sequence<size_t> best, tag;
+template <typename Seq, typename F, typename W>
+void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
+  std::cout << "ConcaveDPParallel start" << std::endl;
+  using T = typename Seq::value_type;
+  static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
+  static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
+  if (n >= 4) assert(w(1, 3) + w(2, 4) >= w(1, 4) + w(2, 3));
 
-  BST(size_t n_) : n(n_) {
-    best.assign(n, 0);
-    tag.assign(n, 0);
-  }
+  auto Go = [&](size_t i, size_t j) { return f(E[i]) + w(i, j); };
 
-  void Pushdown(size_t x, size_t tl, size_t tr) {
+  parlay::sequence<size_t> best(n + 1), tag(n + 1);
+
+  auto Pushdown = [&](size_t x, size_t tl, size_t tr) {
     if (tag[x] == 0) return;
     if (x > tl) {
       size_t lc = (tl + x - 1) / 2;
@@ -29,30 +32,20 @@ struct BST {
       best[rc] = tag[rc] = tag[x];
     }
     tag[x] = 0;
-  }
-};
-
-template <typename Seq, typename F, typename W>
-void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
-  std::cout << "ConcaveDPParallel start" << std::endl;
-  using T = typename Seq::value_type;
-  static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
-  static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
-  if (n >= 4) assert(w(1, 3) + w(2, 4) >= w(1, 4) + w(2, 3));
-
-  BST bst(n + 1);
+  };
 
   std::function<void(size_t, size_t, size_t, size_t)> Visit =
       [&](size_t tl, size_t tr, size_t pl, size_t pr) {
         if (tl > tr) return;
         if (tr < pl || tl > pr) return;
         size_t x = (tl + tr) / 2;
-        bst.Pushdown(x, tl, tr);
+        Pushdown(x, tl, tr);
         if (x < pl) {
           Visit(x + 1, tr, pl, pr);
         } else if (x > pr) {
           Visit(tl, x - 1, pl, pr);
         } else {
+          E[x] = Go(best[x], x);
           parlay::parallel_do([&]() { Visit(tl, x - 1, pl, pr); },
                               [&]() { Visit(x + 1, tr, pl, pr); });
         }
@@ -62,12 +55,7 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
     Visit(1, n, lst, nxt);
     return parlay::any_of(parlay::iota(nxt - lst), [&](size_t i) {
       i += lst;
-      size_t bi = bst.best[i];
-      auto Ei = f(E[bi]) + w(bi, i);
-      size_t j = i + 1;
-      size_t bj = bst.best[j];
-      auto Ej = f(E[bj]) + w(bj, j);
-      return f(Ei) + w(i, j) < Ej;
+      return Go(i, i + 1) < E[i + 1];
     });
   };
 
@@ -76,18 +64,17 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
         if (tl > tr) return;
         if (tr < pl || tl > pr) return;
         size_t x = (tl + tr) / 2;
-        bst.Pushdown(x, tl, tr);
+        Pushdown(x, tl, tr);
         if (x < pl) {
           Update(x + 1, tr, bl, br, pl, pr);
         } else if (x > pr) {
           Update(tl, x - 1, bl, br, pl, pr);
         } else if (bl == br) {
-          size_t bx = bst.best[x];
-          if (f(E[bl]) + w(bl, x) < f(E[bx]) + w(bx, x)) {
-            bst.best[x] = bl;
+          if (Go(bl, x) < Go(best[x], x)) {
+            best[x] = bl;
             if (x > tl) {
               size_t y = (tl + x - 1) / 2;
-              bst.best[y] = bst.tag[y] = bl;
+              best[y] = tag[y] = bl;
             }
             Update(x + 1, tr, bl, br, pl, pr);
           } else {
@@ -97,12 +84,11 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
           auto a = parlay::iota(br - bl + 1);
           auto it = parlay::min_element(a, [&](size_t i, size_t j) {
             i += bl, j += bl;
-            return f(E[i]) + w(i, x) < f(E[j]) + w(j, x);
+            return Go(i, x) < Go(j, x);
           });
           auto i = it - a.begin() + bl;
-          size_t bx = bst.best[x];
-          if (f(E[i]) + w(i, x) < f(E[bx]) + w(bx, x)) {
-            bst.best[x] = i;
+          if (Go(i, x) < E[x]) {
+            best[x] = i;
             parlay::parallel_do([&]() { Update(tl, x - 1, i, br, pl, pr); },
                                 [&]() { Update(x + 1, tr, bl, i, pl, pr); });
           } else {
@@ -126,10 +112,6 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
     t1.stop();
     step[to - now]++;
     t2.start();
-    parlay::parallel_for(now + 1, to + 1, [&](size_t j) {
-      size_t i = bst.best[j];
-      E[j] = f(E[i]) + w(i, j);
-    });
     Update(1, n, now + 1, to, to + 1, n);
     t2.stop();
     now = to;

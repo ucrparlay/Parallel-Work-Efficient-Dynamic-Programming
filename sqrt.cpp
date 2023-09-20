@@ -13,16 +13,11 @@
 
 using namespace std;
 
-using uint64 = unsigned long long;
 using real = long double;
 
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 2, "cost");
-
-mt19937_64 rng(0);
-// mt19937_64
-// rng(chrono::high_resolution_clock::now().time_since_epoch().count());
 
 auto MakeData(size_t n) {
   parlay::sequence<real> a(n + 1);

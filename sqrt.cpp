@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   assert(sum.size() == n + 1);
   cout << "MakeData end" << endl;
 
-  // D[i] = E[i] + cost
+  // D[i] = E[i] - cost
   auto f = [&](real Ei) -> real { return Ei - cost; };
 
   // w(i, j) = sqrt(sum(i + 1, j))

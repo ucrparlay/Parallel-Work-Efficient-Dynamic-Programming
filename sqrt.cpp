@@ -59,8 +59,8 @@ int main(int argc, char *argv[]) {
   parlay::internal::timer tm;
 
   parlay::sequence<real> E1(n + 1);
-  // BruteForceDP(n, E1, f, w);
-  // tm.next("brute-force");
+  BruteForceDP(n, E1, f, w);
+  tm.next("brute-force");
 
   // cout << "E1: ";
   // for (int i = 1; i <= n; i++) {

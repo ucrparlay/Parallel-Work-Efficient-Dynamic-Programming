@@ -25,3 +25,6 @@ target_link_libraries(post_office parlay gflags::gflags)
 
 add_executable(sqrt sqrt.cpp)
 target_link_libraries(sqrt parlay gflags::gflags)
+
+add_executable(tmp tmp.cpp)
+target_link_libraries(tmp parlay gflags::gflags)

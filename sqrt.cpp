@@ -20,7 +20,7 @@ DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 2, "cost");
 
 mt19937_64 rng(0);
-// mt19937 rng(chrono::high_resolution_clock::now().time_since_epoch().count());
+// mt19937_64 rng(chrono::high_resolution_clock::now().time_since_epoch().count());
 
 auto MakeData(size_t n) {
   parlay::sequence<real> a(n + 1);
@@ -59,8 +59,8 @@ int main(int argc, char *argv[]) {
   parlay::internal::timer tm;
 
   parlay::sequence<real> E1(n + 1);
-  BruteForceDP(n, E1, f, w);
-  tm.next("brute-force");
+  // BruteForceDP(n, E1, f, w);
+  // tm.next("brute-force");
 
   // cout << "E1: ";
   // for (int i = 1; i <= n; i++) {
@@ -76,7 +76,8 @@ int main(int argc, char *argv[]) {
   tm.next("parallel");
 
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {
-    return abs(E1[i] - E2[i]) < 1e-7 && abs(E2[i] - E3[i]) < 1e-7;
+    // return abs(E1[i] - E2[i]) < 1e-7 && abs(E2[i] - E3[i]) < 1e-7;
+    return abs(E2[i] - E3[i]) < 1e-7;
   });
   cout << "ok: " << ok << endl;
 

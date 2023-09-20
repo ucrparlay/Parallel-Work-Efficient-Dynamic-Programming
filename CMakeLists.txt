@@ -15,6 +15,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_subdirectory(gflags)
 add_subdirectory(parlaylib)
 
+add_compile_options(-O3 -mcx16 -march=native)
+
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 

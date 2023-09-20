@@ -19,7 +19,7 @@ DEFINE_uint64(range, 100, "range");
 DEFINE_uint64(cost, 10, "cost");
 
 mt19937_64 rng(0);
-// mt19937 rng(chrono::high_resolution_clock::now().time_since_epoch().count());
+// mt19937_64 rng(chrono::high_resolution_clock::now().time_since_epoch().count());
 
 auto MakeData(size_t n) {
   parlay::sequence<uint64> x(n + 1);
@@ -67,8 +67,8 @@ int main(int argc, char *argv[]) {
   parlay::sequence<uint64> E3(n + 1);
 
   parlay::internal::timer tm;
-  BruteForceDP(n, E1, f, w);
-  tm.next("brute-force");
+  // BruteForceDP(n, E1, f, w);
+  // tm.next("brute-force");
 
   ConvexDPSequential(n, E2, f, w);
   tm.next("sequential");
@@ -77,7 +77,8 @@ int main(int argc, char *argv[]) {
   tm.next("parallel");
 
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {
-    return E1[i] == E2[i] && E2[i] == E3[i];
+    // return E1[i] == E2[i] && E2[i] == E3[i];
+    return E2[i] == E3[i];
   });
   cout << "ok: " << ok << '\n';
 

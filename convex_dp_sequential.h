@@ -19,6 +19,8 @@ void ConvexDPSequential(size_t n, Seq& E, F f, W w) {
     return t1 < t2;
   };
 
+  std::cout << "ConvexDPSequential start" << std::endl;
+
   std::deque<std::array<size_t, 3>> que = {{0, 1, n}};
   for (size_t j = 1; j <= n; j++) {
     while (que.front()[2] < j) que.pop_front();

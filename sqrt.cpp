@@ -18,6 +18,7 @@ using real = long double;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 2, "cost");
+DEFINE_string(run, "seq,par", "brute, seq, par");
 
 auto MakeData(size_t n) {
   parlay::sequence<real> a(n + 1);
@@ -57,6 +58,9 @@ int main(int argc, char *argv[]) {
   parlay::internal::timer tm;
 
   parlay::sequence<real> E1(n + 1);
+  parlay::sequence<real> E2(n + 1);
+  parlay::sequence<real> E3(n + 1);
+
   // BruteForceDP(n, E1, f, w);
   // tm.next("brute-force");
 
@@ -65,13 +69,15 @@ int main(int argc, char *argv[]) {
   //   cout << fixed << setprecision(6) << E1[i] << " \n"[i == n];
   // }
 
-  parlay::sequence<real> E2(n + 1);
-  ConcaveDPSequential(n, E2, f, w);
-  tm.next("sequential");
+  if (FLAGS_run.find("seq") != string::npos) {
+    ConcaveDPSequential(n, E2, f, w);
+    tm.next("sequential");
+  }
 
-  parlay::sequence<real> E3(n + 1);
-  ConcaveDPParallel(n, E3, f, w);
-  tm.next("parallel");
+  if (FLAGS_run.find("par") != string::npos) {
+    ConcaveDPParallel(n, E3, f, w);
+    tm.next("parallel");
+  }
 
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {
     // return abs(E1[i] - E2[i]) < 1e-7 && abs(E2[i] - E3[i]) < 1e-7;

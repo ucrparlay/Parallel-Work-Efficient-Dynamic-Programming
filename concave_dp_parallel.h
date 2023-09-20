@@ -95,7 +95,7 @@ void ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
           auto i = it - a.begin() + bl;
           if (Go(i, x) < E[x]) {
             best[x] = i;
-            if (br - bl > granuality || pr - pl > granuality) {
+            if (br - bl > granuality && pr - pl > granuality) {
               parlay::parallel_do([&]() { Update(tl, x - 1, i, br, pl, pr); },
                                   [&]() { Update(x + 1, tr, bl, i, pl, pr); });
             } else {

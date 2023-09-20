@@ -94,7 +94,7 @@ void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
           auto i = it - a.begin() + bl;
           if (Go(i, x) < Go(best[x], x)) {
             best[x] = i;
-            if (br - bl > granuality || pr - pl > granuality) {
+            if (br - bl > granuality && pr - pl > granuality) {
               parlay::parallel_do([&]() { Update(tl, x - 1, bl, i, pl, pr); },
                                   [&]() { Update(x + 1, tr, i, br, pl, pr); });
             } else {

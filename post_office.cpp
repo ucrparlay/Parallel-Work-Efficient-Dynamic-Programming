@@ -18,6 +18,7 @@ using real = long double;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 10, "cost");
+DEFINE_string(run, "seq,par", "brute, seq, par");
 
 mt19937_64 rng(0);
 // mt19937_64
@@ -44,7 +45,7 @@ int main(int argc, char *argv[]) {
   size_t n = FLAGS_n;
   real cost = FLAGS_cost;
 
-  cout << "n = " << n << '\n';
+  cout << "\nPost Office  " << "n = " << n << '\n';
 
   auto x = MakeData(n);
   // cout << "x: ";
@@ -74,18 +75,22 @@ int main(int argc, char *argv[]) {
   // BruteForceDP(n, E1, f, w);
   // tm.next("brute-force");
 
-  ConvexDPSequential(n, E2, f, w);
-  tm.next("sequential");
+  if (FLAGS_run.find("seq") != string::npos) {
+    ConvexDPSequential(n, E2, f, w);
+    tm.next("sequential");
+  }
 
-  ConvexDPParallel(n, E3, f, w);
-  tm.next("parallel");
+  if (FLAGS_run.find("par") != string::npos) {
+    ConvexDPParallel(n, E3, f, w);
+    tm.next("parallel");
+  }
 
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {
     // return abs(E1[i] - E2[i]) < 1e-7 && abs(E2[i] - E3[i]) < 1e-7;
     return abs(E2[i] - E3[i]) < 1e-7;
   });
   cout << "ok: " << ok << '\n';
-  
+
   // for (size_t i = 1; i <= n; i++) {
   //   if (abs(E2[i] - E3[i]) > 1e-7) {
   //     cout << i << ' ' << E2[i] << ' ' << E3[i] << endl;

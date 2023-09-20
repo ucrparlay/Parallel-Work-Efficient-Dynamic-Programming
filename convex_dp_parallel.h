@@ -57,8 +57,11 @@ void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
         }
       };
 
-  auto HaveDependency = [&](size_t now, size_t nxt) {
-    Visit(1, n, now + 1, nxt);
+  parlay::internal::timer tvv("tvv", false);
+  auto HaveDependency = [&](size_t now, size_t lst, size_t nxt) {
+    tvv.start();
+    Visit(1, n, lst, nxt);
+    tvv.stop();
     size_t bnxt = bst.best[nxt];
     auto Enxt = f(E[bnxt]) + w(bnxt, nxt);
     return parlay::any_of(parlay::iota(nxt - now - 1), [&](size_t i) {
@@ -114,11 +117,12 @@ void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
   parlay::internal::timer t1("t1", false);
   parlay::internal::timer t2("t2", false);
   while (now < n) {
+    if (now % 100000 == 0) std::cout << now << std::endl;
     t1.start();
     size_t to = now + 1;
     while (to < n) {
       size_t nxt = std::min(n, now + 2 * (to - now));
-      if (HaveDependency(now, nxt)) break;
+      if (HaveDependency(now, to, nxt)) break;
       else to = nxt;
     }
     t1.stop();
@@ -137,6 +141,7 @@ void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
   }
   t1.total();
   t2.total();
+  tvv.total();
   std::cout << "ConvexDPParallel end" << std::endl;
 }
 

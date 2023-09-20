@@ -18,7 +18,7 @@ DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_uint64(cost, 10, "cost");
 
-mt19937 rng(0);
+mt19937_64 rng(0);
 // mt19937 rng(chrono::high_resolution_clock::now().time_since_epoch().count());
 
 auto MakeData(size_t n) {
@@ -33,8 +33,8 @@ auto MakeData(size_t n) {
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  auto n = FLAGS_n;
-  auto cost = FLAGS_cost;
+  size_t n = FLAGS_n;
+  uint64 cost = FLAGS_cost;
 
   cout << "n = " << n << '\n';
 

@@ -1,0 +1,84 @@
+#include <iostream>
+#include <random>
+
+#include "brute_force_dp.h"
+#include "concave_dp_parallel.h"
+#include "concave_dp_sequential.h"
+#include "config.h"
+#include "gflags/gflags.h"
+#include "parlay/internal/get_time.h"
+#include "parlay/primitives.h"
+#include "parlay/sequence.h"
+
+using namespace std;
+
+using uint64 = unsigned long long;
+using real = double;
+
+DEFINE_uint64(n, 10, "n");
+DEFINE_uint64(range, 100, "range");
+DEFINE_double(cost, 2, "cost");
+
+mt19937_64 rng(0);
+// mt19937 rng(chrono::high_resolution_clock::now().time_since_epoch().count());
+
+auto MakeData(size_t n) {
+  parlay::sequence<real> a(n + 1);
+  for (size_t i = 1; i <= n; i++) {
+    a[i] = rng() % FLAGS_range;
+  }
+  return a;
+}
+
+int main(int argc, char *argv[]) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+  size_t n = FLAGS_n;
+  real cost = FLAGS_cost;
+  cout << "n: " << n << endl;
+  cout << "cost: " << cost << endl;
+
+  parlay::sequence<real> a = MakeData(n);
+  // cout << "a: ";
+  // for (int i = 1; i <= n; i++) cout << a[i] << " \n"[i == n];
+
+  parlay::sequence<real> sum(n + 1);
+  for (size_t i = 1; i <= n; i++) {
+    sum[i] = sum[i - 1] + a[i];
+  }
+
+  // D[i] = E[i] + cost
+  auto f = [&](real Ei) -> real { return Ei - cost; };
+
+  // w(i, j) = sqrt(sum(i + 1, j))
+  auto w = [&](size_t i, size_t j) -> real {
+    assert(i < j);
+    return sqrt(sum[j] - sum[i]);
+  };
+
+  parlay::internal::timer tm;
+
+  parlay::sequence<real> E1(n + 1);
+  // BruteForceDP(n, E1, f, w);
+  // tm.next("brute-force");
+
+  // cout << "E1: ";
+  // for (int i = 1; i <= n; i++) {
+  //   cout << fixed << setprecision(6) << E1[i] << " \n"[i == n];
+  // }
+
+  parlay::sequence<real> E2(n + 1);
+  ConcaveDPSequential(n, E2, f, w);
+  tm.next("sequential");
+
+  parlay::sequence<real> E3(n + 1);
+  ConcaveDPParallel(n, E3, f, w);
+  tm.next("parallel");
+
+  bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {
+    return abs(E1[i] - E2[i]) < 1e-7 && abs(E2[i] - E3[i]) < 1e-7;
+  });
+  cout << "ok: " << ok << endl;
+
+  return 0;
+}

@@ -32,9 +32,6 @@ auto MakeData(size_t n) {
                FLAGS_range +
            1;
   });
-  for (size_t i = 1; i <= n; i++) {
-    x[i] = rng() % FLAGS_range;
-  }
   parlay::sort_inplace(x);
   return x;
 }

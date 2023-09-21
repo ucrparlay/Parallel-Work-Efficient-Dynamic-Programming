@@ -18,7 +18,7 @@ using real = long double;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 2, "cost");
-DEFINE_string(run, "seq,par", "brute, seq, par");
+DEFINE_string(run, "seq,par", "bf, seq, par");
 
 auto MakeData(size_t n) {
   parlay::sequence<real> a(n + 1);
@@ -55,19 +55,17 @@ int main(int argc, char *argv[]) {
     return sqrt(sum[j] - sum[i]);
   };
 
-  parlay::internal::timer tm;
-
   parlay::sequence<real> E1(n + 1);
   parlay::sequence<real> E2(n + 1);
   parlay::sequence<real> E3(n + 1);
+  parlay::sequence<size_t> best;
 
-  // BruteForceDP(n, E1, f, w);
-  // tm.next("brute-force");
+  parlay::internal::timer tm;
 
-  // cout << "E1: ";
-  // for (int i = 1; i <= n; i++) {
-  //   cout << fixed << setprecision(6) << E1[i] << " \n"[i == n];
-  // }
+  if (FLAGS_run.find("bf") != string::npos) {
+    BruteForceDP(n, E1, f, w);
+    tm.next("brute-force");
+  }
 
   if (FLAGS_run.find("seq") != string::npos) {
     ConcaveDPSequential(n, E2, f, w);
@@ -75,8 +73,14 @@ int main(int argc, char *argv[]) {
   }
 
   if (FLAGS_run.find("par") != string::npos) {
-    ConcaveDPParallel(n, E3, f, w);
+    best = ConcaveDPParallel(n, E3, f, w);
     tm.next("parallel");
+    size_t k = 0, t = n;
+    while (t != 0) {
+      k++;
+      t = best[t];
+    }
+    cout << "output size: " << k << endl;
   }
 
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {

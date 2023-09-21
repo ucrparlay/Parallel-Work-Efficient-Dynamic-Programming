@@ -9,7 +9,7 @@
 #include "parlay/sequence.h"
 
 template <typename Seq, typename F, typename W>
-void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
+auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
   std::cout << "ConvexDPParallel start" << std::endl;
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
@@ -126,6 +126,7 @@ void ConvexDPParallel(size_t n, Seq& E, F f, W w) {
     std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
   }
   std::cout << "ConvexDPParallel end" << std::endl;
+  return best;
 }
 
 #endif  // CONVEX_DP_PARALLEL_H_

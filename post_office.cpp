@@ -18,11 +18,7 @@ using real = long double;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 10, "cost");
-DEFINE_string(run, "seq,par", "brute, seq, par");
-
-mt19937_64 rng(0);
-// mt19937_64
-// rng(chrono::high_resolution_clock::now().time_since_epoch().count());
+DEFINE_string(run, "seq,par", "bf, seq, par");
 
 auto MakeData(size_t n) {
   parlay::sequence<real> x(n + 1);
@@ -42,11 +38,14 @@ int main(int argc, char *argv[]) {
   size_t n = FLAGS_n;
   real cost = FLAGS_cost;
 
-  cout << "\nPost Office  " << "n = " << n << '\n';
+  cout << "\nPost Office  "
+       << "n = " << n << '\n';
 
   auto x = MakeData(n);
-  // cout << "x: ";
-  // for (int i = 1; i <= n; i++) cout << x[i] << " \n"[i == n];
+  if (n <= 20) {
+    cout << "x: ";
+    for (int i = 1; i <= n; i++) cout << x[i] << " \n"[i == n];
+  }
   cout << "cost: " << cost << '\n';
   auto sum = parlay::scan_inclusive(x);
 
@@ -67,10 +66,14 @@ int main(int argc, char *argv[]) {
   parlay::sequence<real> E1(n + 1);
   parlay::sequence<real> E2(n + 1);
   parlay::sequence<real> E3(n + 1);
+  parlay::sequence<size_t> best;
 
   parlay::internal::timer tm;
-  // BruteForceDP(n, E1, f, w);
-  // tm.next("brute-force");
+
+  if (FLAGS_run.find("bf") != string::npos) {
+    BruteForceDP(n, E1, f, w);
+    tm.next("brute-force");
+  }
 
   if (FLAGS_run.find("seq") != string::npos) {
     ConvexDPSequential(n, E2, f, w);
@@ -78,8 +81,14 @@ int main(int argc, char *argv[]) {
   }
 
   if (FLAGS_run.find("par") != string::npos) {
-    ConvexDPParallel(n, E3, f, w);
+    best = ConvexDPParallel(n, E3, f, w);
     tm.next("parallel");
+    size_t k = 0, t = n;
+    while (t != 0) {
+      k++;
+      t = best[t];
+    }
+    cout << "output size: " << k << endl;
   }
 
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {

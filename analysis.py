@@ -7,7 +7,8 @@ def last_num(s):
 
 
 def main():
-    path = 'logs/1e7.txt'
+    path = 'logs_0921/1e9.txt'
+    print(path)
     file = open(path, 'r')
     lines = file.readlines()
     file.close()
@@ -21,6 +22,7 @@ def main():
         cost = 0
         seq = 0
         par = 0
+        k = 0
         steps = ''
         for line in part:
             if line.startswith('cost:'):
@@ -29,13 +31,15 @@ def main():
                 seq = last_num(line)
             if line.startswith('Parlay time: parallel:'):
                 par = last_num(line)
+            if line.startswith('output size:'):
+                k = last_num(line)
             if line.startswith('step:'):
                 if steps != '':
                     steps += ', '
                 steps += '('
                 steps += line.strip()
                 steps += ')'
-        print(cost, seq, par, steps, sep=';')
+        print(cost, seq, par, k, steps, sep=';')
 
 
 if __name__ == '__main__':

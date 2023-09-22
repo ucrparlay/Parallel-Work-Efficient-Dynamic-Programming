@@ -15,7 +15,7 @@ def main():
         for t in range(20):
             costs.append(10**t)
         for cost in costs:
-            cmd = f"./build/post_office -range {rrr} -n {n} -cost {cost} >logs_0921/{name}.txt"
+            cmd = f"./build/post_office -run par,seq -range {rrr} -n {n} -cost {cost} >>logs_0921/{name}.txt"
             subprocess.call(cmd, shell=True)
 
 

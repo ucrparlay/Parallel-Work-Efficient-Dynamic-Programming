@@ -6,6 +6,7 @@
 #include "convex_dp_parallel.h"
 #include "convex_dp_sequential.h"
 #include "gflags/gflags.h"
+#include "glog/logging.h"
 #include "parlay/internal/get_time.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
@@ -32,14 +33,17 @@ auto MakeData(size_t n) {
   return x;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  FLAGS_log_dir = CMAKE_CURRENT_SOURCE_DIR "/logs";
+  FLAGS_alsologtostderr = 1;
+  google::InitGoogleLogging(argv[0]);
 
   size_t n = FLAGS_n;
   real cost = FLAGS_cost;
 
-  cout << "\nPost Office  "
-       << "n = " << n << '\n';
+  LOG(INFO) << "\nPost Office  "
+            << "n = " << n << '\n';
 
   auto x = MakeData(n);
   if (n <= 20) {

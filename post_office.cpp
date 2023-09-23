@@ -35,8 +35,8 @@ auto MakeData(size_t n) {
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  FLAGS_log_dir = CMAKE_CURRENT_SOURCE_DIR "/logs";
-  FLAGS_alsologtostderr = 1;
+  // FLAGS_log_dir = CMAKE_CURRENT_SOURCE_DIR "/logs";
+  FLAGS_alsologtostderr = true;
   google::InitGoogleLogging(argv[0]);
 
   size_t n = FLAGS_n;

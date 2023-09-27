@@ -20,6 +20,7 @@ auto ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
   auto Go = [&](size_t i, size_t j) { return f(E[i]) + w(i, j); };
 
   parlay::sequence<size_t> best(n + 1), tag(n + 1);
+  parlay::sequence<size_t> best2(n + 1);
 
   auto Pushdown = [&](size_t x, size_t tl, size_t tr) {
     if (tag[x] == 0) return;
@@ -48,6 +49,7 @@ auto ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
           Visit(tl, x - 1, pl, pr);
         } else {
           E[x] = Go(best[x], x);
+          best2[x] = best[x];
           if (pr - pl > granuality) {
             parlay::parallel_do([&]() { Visit(tl, x - 1, pl, pr); },
                                 [&]() { Visit(x + 1, tr, pl, pr); });
@@ -127,7 +129,7 @@ auto ConcaveDPParallel(size_t n, Seq& E, F f, W w) {
     std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
   }
   std::cout << "ConcaveDPParallel end" << std::endl;
-  return best;
+  return best2;
 }
 
 #endif  // CONCAVE_DP_PARALLEL_H_

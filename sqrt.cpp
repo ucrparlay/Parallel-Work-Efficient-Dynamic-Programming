@@ -40,8 +40,10 @@ int main(int argc, char *argv[]) {
 
   cout << "MakeData start" << endl;
   parlay::sequence<real> a = MakeData(n);
-  // cout << "a: ";
-  // for (size_t i = 1; i <= n; i++) cout << a[i] << " \n"[i == n];
+  if (n <= 20) {
+    cout << "a: ";
+    for (size_t i = 1; i <= n; i++) cout << a[i] << " \n"[i == n];
+  }
   auto sum = parlay::scan_inclusive(a);
   assert(sum.size() == n + 1);
   cout << "MakeData end" << endl;

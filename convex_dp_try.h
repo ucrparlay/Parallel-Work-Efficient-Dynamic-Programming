@@ -1,17 +1,12 @@
-#ifndef CONVEX_DP_PARALLEL_H_
-#define CONVEX_DP_PARALLEL_H_
-
-#include <algorithm>
 #include <iostream>
 #include <map>
-#include <type_traits>
 
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
 
 template <typename Seq, typename F, typename W>
-auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
-  std::cout << "ConvexDPParallel start" << std::endl;
+auto ConvexDPTry(size_t n, Seq& E, F f, W w) {
+  std::cout << "ConvexDPTry start" << std::endl;
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
@@ -58,11 +53,18 @@ auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
         }
       };
 
-  auto HaveDependency = [&](size_t now, size_t nxt) {
-    return parlay::any_of(parlay::iota(nxt - now - 1), [&](size_t i) {
-      i += now + 1;
-      return Go(i, nxt) < E[nxt];
-    });
+  auto Search = [&](size_t i) {
+    size_t l = i + 1, r = n, res = n + 1;
+    while (l <= r) {
+      size_t mid = (l + r) / 2;
+      if (Go(i, mid) < E[mid]) {
+        res = mid;
+        r = mid - 1;
+      } else {
+        l = mid + 1;
+      }
+    }
+    return res;
   };
 
   std::function<void(size_t, size_t, size_t, size_t, size_t, size_t)> Update =
@@ -111,27 +113,24 @@ auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
   size_t now = 0;
   std::map<size_t, size_t> step;
   while (now < n) {
-    size_t to = now;
-    while (to < n) {
-      size_t s = std::max(2 * (to - now), size_t(1));
-      size_t nxt = std::min(n, now + s);
-      Visit(1, n, to + 1, nxt);
-      if (HaveDependency(now, nxt)) break;
-      else to = nxt;
+    Visit(1, n, now + 1, n);
+    size_t to = n;
+    for (size_t i = now + 1; i <= n; i++) {
+      size_t j = Search(i);
+      to = std::min(to, j - 1);
     }
     step[to - now]++;
     Update(1, n, now + 1, to, to + 1, n);
     // std::cout << "now: " << now << ", to: " << to << std::endl;
     now = to;
   }
+  Visit(1, n, 1, n);
   size_t step_sum = 0;
   for (auto [step, cnt] : step) {
     step_sum += cnt;
     std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
   }
   std::cout << "step_sum: " << step_sum << std::endl;
-  std::cout << "ConvexDPParallel end" << std::endl;
+  std::cout << "ConvexDPTry end" << std::endl;
   return best;
 }
-
-#endif  // CONVEX_DP_PARALLEL_H_

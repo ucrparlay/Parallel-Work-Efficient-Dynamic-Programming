@@ -76,6 +76,8 @@ int main(int argc, char *argv[]) {
 
   if (FLAGS_run.find("par") != string::npos) {
     best = ConcaveDPParallel(n, E3, f, w);
+    // for (int i = 1; i <= n; i++) cout << best[i] << ' ';
+    // cout << endl;
     tm.next("parallel");
     size_t k = 0, t = n;
     while (t != 0) {

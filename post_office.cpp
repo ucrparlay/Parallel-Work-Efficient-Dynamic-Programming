@@ -5,6 +5,7 @@
 #include "config.h"
 #include "convex_dp_parallel.h"
 #include "convex_dp_sequential.h"
+#include "convex_dp_try.h"
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include "parlay/internal/get_time.h"
@@ -19,7 +20,7 @@ using real = long double;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 10, "cost");
-DEFINE_string(run, "seq,par", "bf, seq, par");
+DEFINE_string(run, "seq,par,try", "bf, seq, par");
 
 auto MakeData(size_t n) {
   parlay::sequence<real> x(n + 1);
@@ -70,6 +71,7 @@ int main(int argc, char** argv) {
   parlay::sequence<real> E1(n + 1);
   parlay::sequence<real> E2(n + 1);
   parlay::sequence<real> E3(n + 1);
+  parlay::sequence<real> E4(n + 1);
   parlay::sequence<size_t> best;
 
   parlay::internal::timer tm;
@@ -95,9 +97,20 @@ int main(int argc, char** argv) {
     cout << "output size: " << k << endl;
   }
 
+  if (FLAGS_run.find("try") != string::npos) {
+    ConvexDPTry(n, E4, f, w);
+    tm.next("try");
+  }
+
+  if (n <= 30) {
+    std::cout << "best: ";
+    for (size_t i = 1; i <= n; i++) std::cout << best[i] << ' ';
+    std::cout << std::endl;
+  }
+
   bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) {
     // return abs(E1[i] - E2[i]) < 1e-7 && abs(E2[i] - E3[i]) < 1e-7;
-    return abs(E2[i] - E3[i]) < 1e-7;
+    return abs(E2[i] - E3[i]) < 1e-7 && abs(E2[i] - E4[i]) < 1e-7;
   });
   cout << "ok: " << ok << '\n';
 

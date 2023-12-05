@@ -11,7 +11,7 @@
 
 template <typename Seq, typename F, typename W>
 auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
-  std::cout << "ConvexDPParallel start" << std::endl;
+  std::cout << "\nConvexDPParallel start" << std::endl;
   using T = typename Seq::value_type;
   static_assert(std::is_same_v<T, std::invoke_result_t<W, size_t, size_t>>);
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
@@ -110,7 +110,9 @@ auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
 
   size_t now = 0;
   std::map<size_t, size_t> step;
+  parlay::internal::timer t1("t1", false), t2("t2", false);
   while (now < n) {
+    t1.start();
     size_t to = now;
     while (to < n) {
       size_t s = std::max(2 * (to - now), size_t(1));
@@ -119,11 +121,16 @@ auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
       if (HaveDependency(now, nxt)) break;
       else to = nxt;
     }
+    t1.stop();
+    t2.start();
     step[to - now]++;
     Update(1, n, now + 1, to, to + 1, n);
     // std::cout << "now: " << now << ", to: " << to << std::endl;
     now = to;
+    t2.stop();
   }
+  t1.total();
+  t2.total();
   size_t step_sum = 0;
   for (auto [step, cnt] : step) {
     step_sum += cnt;

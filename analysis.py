@@ -7,7 +7,7 @@ def last_num(s):
 
 
 def main():
-    path = 'logs_0921/1e9.txt'
+    path = 'logs_0922/1e9.txt'
     print(path)
     file = open(path, 'r')
     lines = file.readlines()
@@ -39,7 +39,8 @@ def main():
                 steps += '('
                 steps += line.strip()
                 steps += ')'
-        print(cost, seq, par, k, steps, sep=';')
+        # print(cost, seq, par, k, steps, sep=';')
+        print(par)
 
 
 if __name__ == '__main__':

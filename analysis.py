@@ -7,7 +7,7 @@ def last_num(s):
 
 
 def main():
-    path = 'logs_0922/1e9.txt'
+    path = 'logs_0921/1e7.txt'
     print(path)
     file = open(path, 'r')
     lines = file.readlines()
@@ -17,6 +17,9 @@ def main():
         if lines[i].startswith('Post Office'):
             ids.append(i)
     ids.append(len(lines))
+    seq0 = []
+    par0 = []
+    k0 = []
     for i in range(len(ids) - 1):
         part = lines[ids[i]: ids[i+1]]
         cost = 0
@@ -40,8 +43,14 @@ def main():
                 steps += line.strip()
                 steps += ')'
         # print(cost, seq, par, k, steps, sep=';')
-        print(par)
+        seq0.append(str(seq))
+        par0.append(str(par))
+        k0.append(str(k))
+    print(','.join(seq0))
+    print(','.join(par0))
+    print(','.join(k0))
 
 
 if __name__ == '__main__':
     main()
+

@@ -28,6 +28,3 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(post_office post_office.cpp)
 target_link_libraries(post_office parlay gflags::gflags glog::glog)
-
-add_executable(sqrt sqrt.cpp)
-target_link_libraries(sqrt parlay gflags::gflags glog::glog)

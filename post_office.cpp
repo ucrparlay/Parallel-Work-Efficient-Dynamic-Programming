@@ -4,6 +4,7 @@
 #include "brute_force_dp.h"
 #include "config.h"
 #include "convex_dp_new.h"
+#include "convex_dp_new2.h"
 #include "convex_dp_parallel.h"
 #include "convex_dp_sequential.h"
 #include "gflags/gflags.h"
@@ -20,7 +21,7 @@ using real = long double;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 10, "cost");
-DEFINE_string(run, "newpar", "bf, seq, par, newpar");
+DEFINE_string(run, "par,new1,new2", "bf, seq, par, new1, new2");
 
 auto MakeData(size_t n) {
   parlay::sequence<real> x(n + 1);
@@ -68,7 +69,7 @@ int main(int argc, char** argv) {
     return left + right;
   };
 
-  parlay::sequence<real> E1, E2, E3, E4;
+  parlay::sequence<real> E1, E2, E3, E4, E5;
   parlay::sequence<size_t> best;
 
   parlay::internal::timer tm;
@@ -91,10 +92,16 @@ int main(int argc, char** argv) {
     tm.next("parallel");
   }
 
-  if (FLAGS_run.find("newpar") != string::npos) {
+  if (FLAGS_run.find("new1") != string::npos) {
     E4.resize(n + 1);
     ConvexDPNew(n, E4, f, w);
-    tm.next("newpar");
+    tm.next("new2");
+  }
+
+  if (FLAGS_run.find("new2") != string::npos) {
+    E4.resize(n + 1);
+    ConvexDPNew2(n, E4, f, w);
+    tm.next("new2");
   }
 
   size_t k = 0, t = n;

@@ -26,5 +26,7 @@ add_compile_options(
 configure_file(config.h.in config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/PAM/include)
+
 add_executable(post_office post_office.cpp)
 target_link_libraries(post_office parlay gflags::gflags glog::glog)

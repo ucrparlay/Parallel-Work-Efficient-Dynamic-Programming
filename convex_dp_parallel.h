@@ -137,6 +137,9 @@ auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
     std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
   }
   std::cout << "step_sum: " << step_sum << std::endl;
+  // std::cout << "E: ";
+  // for (size_t i = 1; i <= n; i++) std::cout << E[i] << ' ';
+  // std::cout << std::endl;
   std::cout << "ConvexDPParallel end" << std::endl;
   return best;
 }

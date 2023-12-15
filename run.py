@@ -15,9 +15,9 @@ def main():
         for t in range(20):
             costs.append(10**t)
         for cost in costs:
-            cmd = f'./build/post_office -run seq,par,newpar -range {rrr} -n {n} -cost {cost} &>>logs_0922/{name}.txt'
+            cmd = f'./build/post_office -run seq,par,newpar -range {rrr} -n {n} -cost {cost} &>>logs_1215/{name}.txt'
             subprocess.call(cmd, shell=True)
-            cmd = f'PARLAY_NUM_THREADS=1 ./build/post_office -run newpar -range {rrr} -n {n} -cost {cost} &>>logs_0922/{name}_seq.txt'
+            cmd = f'PARLAY_NUM_THREADS=1 ./build/post_office -run newpar -range {rrr} -n {n} -cost {cost} &>>logs_1215/{name}_seq.txt'
             subprocess.call(cmd, shell=True)
 
 

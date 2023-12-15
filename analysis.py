@@ -7,7 +7,7 @@ def last_num(s):
 
 
 def main():
-    path = 'logs_0921/1e7.txt'
+    path = 'logs_0922/1e9.txt'
     print(path)
     file = open(path, 'r')
     lines = file.readlines()

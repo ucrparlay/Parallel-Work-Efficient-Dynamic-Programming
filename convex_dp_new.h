@@ -161,6 +161,6 @@ auto ConvexDPNew(size_t n, Seq& E, F f, W w) {
   }
   std::cout << "step_sum: " << step_sum << std::endl;
   std::cout << "ConvexDPNew end" << std::endl;
-  std::cout << "asd: " << asd << std::endl;
+  // std::cout << "asd: " << asd << std::endl;
   return best;
 }

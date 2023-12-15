@@ -53,6 +53,8 @@ auto ConvexDPNew(size_t n, Seq& E, F f, W w) {
         }
       };
 
+  parlay::sequence<size_t> bb;
+
   std::function<size_t(size_t, size_t, size_t, size_t, size_t, size_t)>
       FindNext = [&](size_t tl, size_t tr, size_t bl, size_t br, size_t pl,
                      size_t pr) -> size_t {
@@ -61,14 +63,21 @@ auto ConvexDPNew(size_t n, Seq& E, F f, W w) {
     size_t x = (tl + tr) / 2;
     Pushdown(x, tl, tr);
     size_t res = n + 1;
+    // auto a1 = parlay::filter(
+    //     bb, [&](size_t i) { return i < x && Go(i, x) < Go(best[x], x); });
+    // auto a2 = parlay::filter(
+    //     bb, [&](size_t i) { return i >= x || Go(i, x) >= Go(best[x], x); });
+    // bool ok = !a1.empty();
     auto a = parlay::iota(br - bl + 1);
     bool ok = parlay::any_of(a, [&](size_t i) {
       i += bl;
       return i < x && Go(i, x) < Go(best[x], x);
     });
     if (ok) {
+      // bb.swap(a1);
       res = std::min(x, FindNext(tl, x - 1, bl, br, pl, pr));
     } else {
+      // bb.swap(a2);
       res = FindNext(x + 1, tr, bl, br, pl, pr);
     }
     return res;
@@ -128,6 +137,8 @@ auto ConvexDPNew(size_t n, Seq& E, F f, W w) {
       size_t l = now + (size_t(1) << (s - 1));
       size_t r = std::min(n, now + (size_t(1) << s) - 1);
       Visit(1, n, l, r);
+      // bb.resize(r - l + 1);
+      // parlay::parallel_for(0, r - l + 1, [&](size_t i) { bb[i] = l + i; });
       nxt = std::min(nxt, FindNext(1, n, l, r, l + 1, n));
       if (nxt <= r + 1) break;
       s++;
@@ -150,5 +161,6 @@ auto ConvexDPNew(size_t n, Seq& E, F f, W w) {
   }
   std::cout << "step_sum: " << step_sum << std::endl;
   std::cout << "ConvexDPNew end" << std::endl;
+  std::cout << "asd: " << asd << std::endl;
   return best;
 }

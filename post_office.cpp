@@ -3,9 +3,9 @@
 
 #include "brute_force_dp.h"
 #include "config.h"
+#include "convex_dp_new.h"
 #include "convex_dp_parallel.h"
 #include "convex_dp_sequential.h"
-#include "convex_dp_new.h"
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include "parlay/internal/get_time.h"
@@ -74,21 +74,25 @@ int main(int argc, char** argv) {
   parlay::internal::timer tm;
 
   if (FLAGS_run.find("bf") != string::npos) {
+    E1.resize(n + 1);
     BruteForceDP(n, E1, f, w);
     tm.next("brute-force");
   }
 
   if (FLAGS_run.find("seq") != string::npos) {
+    E2.resize(n + 1);
     ConvexDPSequential(n, E2, f, w);
     tm.next("sequential");
   }
 
   if (FLAGS_run.find("par") != string::npos) {
+    E3.resize(n + 1);
     best = ConvexDPParallel(n, E3, f, w);
     tm.next("parallel");
   }
 
   if (FLAGS_run.find("newpar") != string::npos) {
+    E4.resize(n + 1);
     ConvexDPNew(n, E4, f, w);
     tm.next("newpar");
   }

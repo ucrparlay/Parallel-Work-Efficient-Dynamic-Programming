@@ -80,7 +80,7 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
   };
 
   using map_t = pam_map<entry>;
-  using node_t = map_t::Tree::node;
+  using node_t = typename map_t::Tree::node;
 
   std::function<node_t*(size_t, size_t, size_t, size_t)> FindIntervals =
       [&](size_t jl, size_t jr, size_t il, size_t ir) -> node_t* {

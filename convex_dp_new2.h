@@ -42,6 +42,7 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
     }
     const auto Ei = Go(best[i], i);
     E[i] = Ei;
+    if (i >= cur_nxt - 1) return n + 1;
     auto Check = [&](size_t i, size_t j, size_t bj) {
       return i < j && f(Ei) + w(i, j) < Go(bj, j);
     };

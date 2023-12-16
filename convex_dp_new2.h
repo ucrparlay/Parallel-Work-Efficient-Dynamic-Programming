@@ -17,7 +17,7 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
   if (n >= 4) assert(w(1, 3) + w(2, 4) <= w(1, 4) + w(2, 3));
 
-  const int granularity = 256;
+  const int granularity = 1 << 12;
 
   auto Go = [&](size_t i, size_t j) { return f(E[i]) + w(i, j); };
 
@@ -151,7 +151,7 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
         size_t j0 = parlay::min_element(a) - a.begin() + jl;
         parlay::write_min(&minv[j0], im, less);
         parlay::write_max(&maxv[j0], im, less);
-        bool parallel = jr - jl > granularity || ir - il > granularity;
+        bool parallel = jr - jl > granularity && ir - il > granularity;
         conditional_par_do(
             parallel, [&]() { FindIntervals_WriteMin(jl, j0, il, im - 1); },
             [&]() { FindIntervals_WriteMin(j0, jr, im + 1, ir); });

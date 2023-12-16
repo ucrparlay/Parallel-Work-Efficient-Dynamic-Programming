@@ -1,10 +1,12 @@
 #include <array>
+#include <atomic>
 #include <iostream>
 #include <map>
 
 #include "pam/pam.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
+#include "parlay/utilities.h"
 #include "utils.h"
 
 template <typename Seq, typename F, typename W>
@@ -23,7 +25,7 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
   parlay::sequence<std::array<size_t, 3>> intervals;
   const size_t inf = std::numeric_limits<size_t>::max();
 
-  auto FindSentinel = [&](size_t i) -> size_t {
+  auto FindSentinel = [&](size_t i, size_t cur_nxt) -> size_t {
     assert(!intervals.empty());
     size_t l1, r1, l2, r2, m1, m2;
     l1 = 0, r1 = intervals.size() - 1;
@@ -38,7 +40,7 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
         break;
       }
     }
-    auto Ei = Go(best[i], i);
+    const auto Ei = Go(best[i], i);
     E[i] = Ei;
     auto Check = [&](size_t i, size_t j, size_t bj) {
       return i < j && f(Ei) + w(i, j) < Go(bj, j);
@@ -48,11 +50,11 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
     while (l1 <= r1) {
       m1 = (l1 + r1) / 2;
       auto [a, b, c] = intervals[m1];
-      if (Check(i, a, c)) {
+      if (a >= cur_nxt || Check(i, a, c)) {
         sentinel = a;
         r1 = m1 - 1;
       } else if (Check(i, b, c)) {
-        l2 = a, r2 = b;
+        l2 = a, r2 = std::min(cur_nxt, b);
         while (l2 <= r2) {
           m2 = (l2 + r2) / 2;
           if (Check(i, m2, c)) {
@@ -121,10 +123,49 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
         rec[tmp[i][2]].second = tmp[i][1];
       }
     });
-    auto a =
-        parlay::delayed_seq<T>(to - now, [&](size_t i) { return i + now + 1; });
+    auto a = parlay::delayed_seq<size_t>(to - now,
+                                         [&](size_t i) { return i + now + 1; });
     intervals = parlay::map(a, [&](size_t i) -> std::array<size_t, 3> {
       return {rec[i].first, rec[i].second, i};
+    });
+    intervals = parlay::filter(intervals, [&](auto& x) { return x[0] != inf; });
+  };
+
+  parlay::sequence<std::atomic<size_t>> minv(n + 1), maxv(n + 1);
+  auto less = [&](size_t x, size_t y) { return x < y; };
+
+  std::function<void(size_t, size_t, size_t, size_t)> FindIntervals_WriteMin =
+      [&](size_t jl, size_t jr, size_t il, size_t ir) {
+        if (il > ir) return;
+        if (jl == jr) {
+          parlay::write_min(&minv[jl], il, less);
+          parlay::write_max(&maxv[jl], ir, less);
+          return;
+        }
+        size_t im = (il + ir) / 2;
+        auto a = parlay::delayed_seq<T>(jr - jl + 1, [&](size_t j) {
+          j += jl;
+          return Go(j, im);
+        });
+        size_t j0 = parlay::min_element(a) - a.begin() + jl;
+        parlay::write_min(&minv[j0], im, less);
+        parlay::write_max(&maxv[j0], im, less);
+        bool parallel = jr - jl > granularity || ir - il > granularity;
+        conditional_par_do(
+            parallel, [&]() { FindIntervals_WriteMin(jl, j0, il, im - 1); },
+            [&]() { FindIntervals_WriteMin(j0, jr, im + 1, ir); });
+      };
+
+  auto GetNewIntervals_WriteMin = [&](size_t now, size_t to) {
+    parlay::parallel_for(now + 1, to + 1, [&](size_t i) {
+      minv[i] = inf;
+      maxv[i] = 0;
+    });
+    FindIntervals_WriteMin(now + 1, to, to + 1, n);
+    auto a = parlay::delayed_seq<size_t>(to - now,
+                                         [&](size_t i) { return i + now + 1; });
+    intervals = parlay::map(a, [&](size_t i) -> std::array<size_t, 3> {
+      return {(size_t)minv[i], size_t(maxv[i]), i};
     });
     intervals = parlay::filter(intervals, [&](auto& x) { return x[0] != inf; });
   };
@@ -133,6 +174,7 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
   std::map<size_t, size_t> step;
   parlay::internal::timer t1("t1", false), t2("t2", false);
   intervals.push_back({1, n, 0});
+  parlay::sequence<size_t> aa(n + 1);
   while (now < n) {
     t1.start();
     size_t s = 1;
@@ -140,9 +182,9 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
     for (;;) {
       size_t l = now + (size_t(1) << (s - 1));
       size_t r = std::min(n, now + (size_t(1) << s) - 1);
-      auto a = parlay::delayed_seq<size_t>(
-          r - l + 1, [&](size_t i) { return FindSentinel(i + l); });
-      nxt = std::min(nxt, *parlay::min_element(a));
+      parlay::parallel_for(0, r - l + 1,
+                           [&](size_t i) { aa[i] = FindSentinel(i + l, nxt); });
+      nxt = std::min(nxt, *parlay::min_element(aa.cut(0, r - l + 1)));
       if (nxt <= r + 1) break;
       s++;
     }
@@ -152,7 +194,8 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
     step[to - now]++;
     if (nxt > n) break;
     t2.start();
-    GetNewIntervals(now, to);
+    // GetNewIntervals(now, to);
+    GetNewIntervals_WriteMin(now, to);
     now = to;
     t2.stop();
     // std::cout << "intervals: ";

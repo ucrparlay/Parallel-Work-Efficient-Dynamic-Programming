@@ -95,12 +95,12 @@ int main(int argc, char** argv) {
   if (FLAGS_run.find("new1") != string::npos) {
     E4.resize(n + 1);
     ConvexDPNew(n, E4, f, w);
-    tm.next("new2");
+    tm.next("new1");
   }
 
   if (FLAGS_run.find("new2") != string::npos) {
-    E4.resize(n + 1);
-    ConvexDPNew2(n, E4, f, w);
+    E5.resize(n + 1);
+    ConvexDPNew2(n, E5, f, w);
     tm.next("new2");
   }
 
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
   }
 
   bool ok = parlay::all_of(parlay::iota(n + 1),
-                           [&](size_t i) { return abs(E3[i] - E4[i]) < 1e-7; });
+                           [&](size_t i) { return abs(E3[i] - E5[i]) < 1e-7; });
   cout << "\nok: " << ok << '\n';
 
   return 0;

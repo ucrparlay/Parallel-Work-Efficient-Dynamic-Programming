@@ -30,3 +30,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/PAM/include)
 
 add_executable(post_office post_office.cpp)
 target_link_libraries(post_office parlay gflags::gflags glog::glog)
+
+add_executable(lcs lcs.cpp)
+target_link_libraries(lcs parlay gflags::gflags glog::glog)

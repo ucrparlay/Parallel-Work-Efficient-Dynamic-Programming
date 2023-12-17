@@ -1,6 +1,8 @@
 #ifndef LCS_PARALLEL_H_
 #define LCS_PARALLEL_H_
 
+#include <set>
+
 #include "parlay/internal/group_by.h"
 #include "parlay/parallel.h"
 #include "parlay/primitives.h"
@@ -29,24 +31,31 @@ size_t ParallelLCS(const Seq& a, size_t n, const Seq& b, size_t m) {
     });
     vals.swap(bis);
   });
-  std::cout << "a: ";
-  for (size_t i = 1; i <= n; i++) std::cout << a[i] << ' ';
-  std::cout << std::endl;
-  std::cout << "b: ";
-  for (size_t i = 1; i <= m; i++) std::cout << b[i] << ' ';
-  std::cout << std::endl;
-  std::cout << "cg: " << std::endl;
-  for (auto& [key, vals] : cg) {
-    std::cout << key << ", [";
-    for (size_t i = 0; i < vals.size(); i++) {
-      std::cout << vals[i];
-      if (i != vals.size() - 1) std::cout << ", ";
-    }
-    std::cout << "]" << std::endl;
-  }
-  std::cout << "go: ";
-  for (size_t i = 1; i <= n; i++) std::cout << go[i] << ' ';
-  std::cout << std::endl;
+  size_t tot = parlay::reduce(
+      parlay::delayed_seq<size_t>(n + 1, [&](size_t i) -> size_t {
+        if (i > 0) return cg[go[i]].second.size();
+        else return 0;
+      }));
+  std::cout << "tot arrows: " << tot << std::endl;
+
+  // std::cout << "a: ";
+  // for (size_t i = 1; i <= n; i++) std::cout << a[i] << ' ';
+  // std::cout << std::endl;
+  // std::cout << "b: ";
+  // for (size_t i = 1; i <= m; i++) std::cout << b[i] << ' ';
+  // std::cout << std::endl;
+  // std::cout << "cg: " << std::endl;
+  // for (auto& [key, vals] : cg) {
+  //   std::cout << key << ", [";
+  //   for (size_t i = 0; i < vals.size(); i++) {
+  //     std::cout << vals[i];
+  //     if (i != vals.size() - 1) std::cout << ", ";
+  //   }
+  //   std::cout << "]" << std::endl;
+  // }
+  // std::cout << "go: ";
+  // for (size_t i = 1; i <= n; i++) std::cout << go[i] << ' ';
+  // std::cout << std::endl;
 
   auto Read = [&](size_t i) {
     if (now[i] >= cg[go[i]].second.size()) return inf;
@@ -69,12 +78,14 @@ size_t ParallelLCS(const Seq& a, size_t n, const Seq& b, size_t m) {
         tree[x] = std::min(tree[lc(x)], tree[rc(x)]);
       };
 
-  std::function<void(size_t, size_t, size_t, size_t, bool)> PrefixMin =
-      [&](size_t x, size_t l, size_t r, size_t pre, bool is_first) {
+  std::function<void(size_t, size_t, size_t, size_t)> PrefixMin =
+      [&](size_t x, size_t l, size_t r, size_t pre) {
         if (tree[x] > pre) return;
         if (l == r) {
-          if (is_first) now[l] = cg[go[l]].second.size();
-          else now[l]++;
+          while (now[l] < cg[go[l]].second.size() &&
+                 cg[go[l]].second[now[l]] <= pre) {
+            now[l]++;
+          }
           tree[x] = Read(l);
           return;
         }
@@ -82,14 +93,15 @@ size_t ParallelLCS(const Seq& a, size_t n, const Seq& b, size_t m) {
         if (tree[x] == tree[rc(x)]) {
           if (tree[lc(x)] <= pre && tree[lc(x)] < inf) {
             bool parallel = r - l > granularity;
+            size_t lc_val = tree[lc(x)];
             conditional_par_do(
-                parallel, [&]() { PrefixMin(lc(x), l, mid, pre, is_first); },
-                [&]() { PrefixMin(rc(x), mid + 1, r, tree[lc(x)], false); });
+                parallel, [&]() { PrefixMin(lc(x), l, mid, pre); },
+                [&]() { PrefixMin(rc(x), mid + 1, r, lc_val); });
           } else {
-            PrefixMin(rc(x), mid + 1, r, pre, is_first);
+            PrefixMin(rc(x), mid + 1, r, pre);
           }
         } else {
-          PrefixMin(lc(x), l, mid, pre, is_first);
+          PrefixMin(lc(x), l, mid, pre);
         }
         tree[x] = std::min(tree[lc(x)], tree[rc(x)]);
       };
@@ -98,7 +110,10 @@ size_t ParallelLCS(const Seq& a, size_t n, const Seq& b, size_t m) {
   size_t round = 0;
   while (tree[1] < inf) {
     round++;
-    PrefixMin(1, 1, n, inf, true);
+    PrefixMin(1, 1, n, inf);
+    // std::cout << "now: ";
+    // for (int i = 1; i <= n; i++) std::cout << now[i] << ' ';
+    // std::cout << std::endl;
   }
   return round;
 }

@@ -10,6 +10,7 @@ using namespace std;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 10, "range");
 DEFINE_bool(lis, false, "lis");
+DEFINE_string(run, "bf,par", "bf, par");
 
 int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -26,11 +27,20 @@ int main(int argc, char** argv) {
     });
   }
 
-  auto res1 = BruteForceLCS(a, n, b, n);
-  std::cout << "res1: " << res1 << std::endl;
+  parlay::internal::timer tm;
+  size_t res1, res2;
 
-  auto res2 = ParallelLCS(a, n, b, n);
-  std::cout << "res2: " << res2 << std::endl;
+  if (FLAGS_run.find("bf") != string::npos) {
+    res1 = BruteForceLCS(a, n, b, n);
+    std::cout << "bf res: " << res1 << std::endl;
+    tm.next("brute force");
+  }
+
+  if (FLAGS_run.find("par") != string::npos) {
+    res2 = ParallelLCS(a, n, b, n);
+    std::cout << "par res: " << res2 << std::endl;
+    tm.next("parallel");
+  }
 
   std::cout << "\nok: " << (res1 == res2) << std::endl;
 

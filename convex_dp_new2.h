@@ -220,4 +220,5 @@ auto ConvexDPNew2(size_t n, Seq& E, F f, W w) {
   // for (size_t i = 1; i <= n; i++) std::cout << E[i] << ' ';
   // std::cout << std::endl;
   std::cout << "ConvexDPNew2 end" << std::endl;
+  return best;
 }

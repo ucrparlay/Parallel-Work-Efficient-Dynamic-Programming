@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
 
   if (FLAGS_run.find("new2") != string::npos) {
     E5.resize(n + 1);
-    ConvexDPNew2(n, E5, f, w);
+    best = ConvexDPNew2(n, E5, f, w);
     tm.next("new2");
   }
 
@@ -117,9 +117,10 @@ int main(int argc, char** argv) {
     std::cout << std::endl;
   }
 
-  bool ok = parlay::all_of(parlay::iota(n + 1),
-                           [&](size_t i) { return abs(E3[i] - E5[i]) < 1e-7; });
-  cout << "\nok: " << ok << '\n';
+  if (!E3.empty() && !E5.empty()) {
+    bool ok = parlay::all_of(parlay::iota(n + 1), [&](size_t i) { return abs(E3[i] - E5[i]) < 1e-7; });
+    cout << "\nok: " << ok << '\n';
+  }
 
   return 0;
 }

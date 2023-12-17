@@ -6,8 +6,8 @@ def last_num(s):
     return float(t)
 
 
-def main():
-    path = 'logs_0922/1e9.txt'
+def work(name):
+    path = f'logs_1217/{name}_seq.txt'
     print(path)
     file = open(path, 'r')
     lines = file.readlines()
@@ -32,7 +32,7 @@ def main():
                 cost = last_num(line)
             if line.startswith('Parlay time: sequential:'):
                 seq = last_num(line)
-            if line.startswith('Parlay time: parallel:'):
+            if line.startswith('Parlay time: new2:'):
                 par = last_num(line)
             if line.startswith('output size:'):
                 k = last_num(line)
@@ -52,5 +52,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    for name in ['1e8','1e9']:
+        work(name)
 

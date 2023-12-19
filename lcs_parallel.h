@@ -82,9 +82,14 @@ size_t ParallelLCS(const Seq& a, size_t n, const Seq& b, size_t m) {
       [&](size_t x, size_t l, size_t r, size_t pre) {
         if (tree[x] > pre) return;
         if (l == r) {
-          while (now[l] < cg[go[l]].second.size() &&
-                 cg[go[l]].second[now[l]] <= pre) {
-            now[l]++;
+          auto& ys = cg[go[l]].second;
+          if (now[l] + 8 >= ys.size() || ys[now[l] + 8] > pre) {
+            while (now[l] < ys.size() && ys[now[l]] <= pre) {
+              now[l]++;
+            }
+          } else {
+            now[l] = std::upper_bound(ys.begin() + now[l], ys.end(), pre) -
+                     ys.begin();
           }
           tree[x] = Read(l);
           return;

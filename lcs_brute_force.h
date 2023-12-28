@@ -4,17 +4,21 @@
 #include <vector>
 
 template <typename Seq>
-size_t BruteForceLCS(const Seq& a, size_t n, const Seq& b, size_t m) {
-  std::vector dp(n + 1, std::vector<size_t>(m + 1));
+size_t BruteForceLCS(size_t n, const Seq& arrows) {
+  std::vector a(n + 1, std::vector<bool>(n + 1));
   for (size_t i = 1; i <= n; i++) {
-    for (size_t j = 1; j <= m; j++) {
+    for (auto x : arrows[i]) a[i][x] = true;
+  }
+  std::vector dp(n + 1, std::vector<size_t>(n + 1));
+  for (size_t i = 1; i <= n; i++) {
+    for (size_t j = 1; j <= n; j++) {
       dp[i][j] = std::max(dp[i - 1][j], dp[i][j - 1]);
-      if (a[i] == b[j]) {
+      if (a[i][j]) {
         dp[i][j] = std::max(dp[i][j], dp[i - 1][j - 1] + 1);
       }
     }
   }
-  return dp[n][m];
+  return dp[n][n];
 }
 
 #endif  // LCS_BRUTE_FORCE_H_

@@ -11,8 +11,8 @@ def go(n):
 if __name__ == '__main__':
   log_dir = 'logs_1228'
   subprocess.call(f'mkdir -p {log_dir}', shell=True)
-  for n in [10**8, 10**9]:
-    for m in [10**8, 10**9]:
+  for m in [10**7, 10**8, 10**9, 10**10]:
+    for n in [10**7, 10**8, 10**9]:
       name = f'n_{go(n)}_m_{go(m)}'
       for k in [1, 10, 100, 1000, 10**4, 10**5, 10**6, 10**7, 10**8, 10**9, 10**10]:
         if k <= m and k <= n and m <= k * n:

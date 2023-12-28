@@ -1,0 +1,80 @@
+
+-------------
+n: 1000000000
+m: 10000000
+k: 1
+total arrows: 10000000
+par res: 1
+Parlay time: parallel: 0.6525
+seq res: 1
+Parlay time: sequential: 32.0702
+
+-------------
+n: 1000000000
+m: 10000000
+k: 10
+total arrows: 10000000
+par res: 10
+Parlay time: parallel: 0.6554
+seq res: 10
+Parlay time: sequential: 28.7226
+
+-------------
+n: 1000000000
+m: 10000000
+k: 100
+total arrows: 10000000
+par res: 100
+Parlay time: parallel: 0.7167
+seq res: 100
+Parlay time: sequential: 30.9687
+
+-------------
+n: 1000000000
+m: 10000000
+k: 1000
+total arrows: 10000000
+par res: 1000
+Parlay time: parallel: 1.5432
+seq res: 1000
+Parlay time: sequential: 31.6464
+
+-------------
+n: 1000000000
+m: 10000000
+k: 10000
+total arrows: 10000000
+par res: 10000
+Parlay time: parallel: 1.6152
+seq res: 10000
+Parlay time: sequential: 32.0639
+
+-------------
+n: 1000000000
+m: 10000000
+k: 100000
+total arrows: 10000000
+par res: 100000
+Parlay time: parallel: 1.7199
+seq res: 100000
+Parlay time: sequential: 31.8362
+
+-------------
+n: 1000000000
+m: 10000000
+k: 1000000
+total arrows: 10000000
+par res: 1000000
+Parlay time: parallel: 1.8619
+seq res: 1000000
+Parlay time: sequential: 32.2765
+
+-------------
+n: 1000000000
+m: 10000000
+k: 10000000
+total arrows: 10000000
+par res: 10000000
+Parlay time: parallel: 4.1875
+seq res: 10000000
+Parlay time: sequential: 32.1038

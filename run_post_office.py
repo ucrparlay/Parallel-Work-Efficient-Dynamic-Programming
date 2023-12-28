@@ -3,7 +3,7 @@ import subprocess
 
 
 def main():
-    log_dir = 'logs_1217'
+    log_dir = 'logs_1223'
     config = [
         # (10**6, '1e6'),
         # (10**7, '1e7'),
@@ -13,7 +13,7 @@ def main():
     for n, name in config:
         rrr = 10000000000
         costs = [0]
-        for t in range(20):
+        for t in range(10):
             costs.append(10**t)
         for cost in costs:
             cmd = f'./build/post_office -run seq,new2 -range {rrr} -n {n} -cost {cost} &>>{log_dir}/{name}_par.txt'

@@ -1,0 +1,18 @@
+
+-------------
+n: 10000000
+m: 10000000000
+k: 1000
+total arrows: 10000000000
+par res: 1000
+Parlay time: parallel: 83.7219
+seq res: 1000
+Parlay time: sequential: 2663.6892
+
+-------------
+n: 10000000
+m: 10000000000
+k: 10000
+total arrows: 10000000000
+par res: 10000
+Parlay time: parallel: 69.4469

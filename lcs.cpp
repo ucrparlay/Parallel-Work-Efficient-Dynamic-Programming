@@ -13,6 +13,23 @@ DEFINE_uint64(m, 40, "# of arrows");
 DEFINE_uint64(k, 5, "LCS");
 DEFINE_string(run, "bf,par,seq", "bf, par, seq");
 
+auto MakeRandom(size_t n) {
+  parlay::sequence<size_t> a(n + 1), b(n + 1);
+  parlay::parallel_for(1, n + 1, [&](size_t i) {
+    a[i] = parlay::hash64(i) % 10;
+    b[i] = parlay::hash64(parlay::hash64(i + (size_t)(&n))) % 10;
+  });
+  parlay::sequence<parlay::sequence<size_t>> arrows(n + 1);
+  parlay::parallel_for(1, n + 1, [&](size_t i) {
+    for (size_t j = 1; j <= n; j++) {
+      if (a[i] == b[j]) {
+        arrows[i].push_back(j);
+      }
+    }
+  });
+  return arrows;
+}
+
 auto MakeData(size_t n, size_t m, size_t k) {
   assert(k <= m);
   assert(k <= n);
@@ -60,7 +77,8 @@ int main(int argc, char** argv) {
 
   auto n = FLAGS_n, m = FLAGS_m, k = FLAGS_k;
   cout << "\n-------------\nn: " << n << "\nm: " << m << "\nk: " << k << endl;
-  auto arrows = MakeData(n, m, k);
+  // auto arrows = MakeData(n, m, k);
+  auto arrows = MakeRandom(n);
 
   // for (int i = 1; i <= n; i++) {
   //   for (int x : arrows[i]) cout << x << ' ';
@@ -74,21 +92,21 @@ int main(int argc, char** argv) {
     res1 = BruteForceLCS(n, arrows);
     std::cout << "bf res: " << res1 << std::endl;
     tm.next("brute force");
-    assert(res1 == FLAGS_k);
+    // assert(res1 == FLAGS_k);
   }
 
   if (FLAGS_run.find("par") != string::npos) {
     res2 = ParallelLCS(n, arrows);
     std::cout << "par res: " << res2 << std::endl;
     tm.next("parallel");
-    assert(res2 == FLAGS_k);
+    // assert(res2 == FLAGS_k);
   }
 
   if (FLAGS_run.find("seq") != string::npos) {
     res2 = ParallelLCS<true>(n, arrows);
     std::cout << "seq res: " << res2 << std::endl;
     tm.next("sequential");
-    assert(res2 == FLAGS_k);
+    // assert(res2 == FLAGS_k);
   }
 
   if (FLAGS_run.find("bf") != string::npos &&

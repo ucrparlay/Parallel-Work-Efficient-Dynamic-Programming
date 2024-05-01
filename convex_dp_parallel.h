@@ -1,13 +1,13 @@
-#ifndef CONVEX_DP_PARALLEL_H_
-#define CONVEX_DP_PARALLEL_H_
-
-#include <algorithm>
+#include <array>
+#include <atomic>
 #include <iostream>
 #include <map>
-#include <type_traits>
 
+#include "pam/pam.h"
 #include "parlay/primitives.h"
 #include "parlay/sequence.h"
+#include "parlay/utilities.h"
+#include "utils.h"
 
 template <typename Seq, typename F, typename W>
 auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
@@ -17,131 +17,208 @@ auto ConvexDPParallel(size_t n, Seq& E, F f, W w) {
   static_assert(std::is_same_v<T, std::invoke_result_t<F, T>>);
   if (n >= 4) assert(w(1, 3) + w(2, 4) <= w(1, 4) + w(2, 3));
 
+  const int granularity = 1 << 12;
+
   auto Go = [&](size_t i, size_t j) { return f(E[i]) + w(i, j); };
 
-  parlay::sequence<size_t> best(n + 1), tag(n + 1);
+  parlay::sequence<size_t> best(n + 1);
+  parlay::sequence<std::array<size_t, 3>> intervals;
+  const size_t inf = std::numeric_limits<size_t>::max();
 
-  auto Pushdown = [&](size_t x, size_t tl, size_t tr) {
-    if (tag[x] == 0) return;
-    if (x > tl) {
-      size_t lc = (tl + x - 1) / 2;
-      best[lc] = tag[lc] = tag[x];
+  auto FindSentinel = [&](size_t i, size_t cur_nxt) -> size_t {
+    assert(!intervals.empty());
+    size_t l1, r1, l2, r2, m1, m2;
+    l1 = 0, r1 = intervals.size() - 1;
+    while (l1 <= r1) {
+      m1 = (l1 + r1) / 2;
+      if (intervals[m1][0] > i) {
+        r1 = m1 - 1;
+      } else if (intervals[m1][1] < i) {
+        l1 = m1 + 1;
+      } else {
+        best[i] = intervals[m1][2];
+        break;
+      }
     }
-    if (x < tr) {
-      size_t rc = (x + 1 + tr) / 2;
-      best[rc] = tag[rc] = tag[x];
-    }
-    tag[x] = 0;
-  };
-
-  const size_t granuality = 256;
-
-  std::function<void(size_t, size_t, size_t, size_t)> Visit =
-      [&](size_t tl, size_t tr, size_t pl, size_t pr) {
-        if (tl > tr) return;
-        if (tr < pl || tl > pr) return;
-        size_t x = (tl + tr) / 2;
-        Pushdown(x, tl, tr);
-        if (x < pl) {
-          Visit(x + 1, tr, pl, pr);
-        } else if (x > pr) {
-          Visit(tl, x - 1, pl, pr);
-        } else {
-          E[x] = Go(best[x], x);
-          if (pr - pl > granuality) {
-            parlay::parallel_do([&]() { Visit(tl, x - 1, pl, pr); },
-                                [&]() { Visit(x + 1, tr, pl, pr); });
+    const auto Ei = Go(best[i], i);
+    E[i] = Ei;
+    if (i >= cur_nxt - 1) return n + 1;
+    auto Check = [&](size_t i, size_t j, size_t bj) {
+      return i < j && f(Ei) + w(i, j) < Go(bj, j);
+    };
+    l1 = 0, r1 = intervals.size() - 1;
+    size_t sentinel = n + 1;
+    while (l1 <= r1) {
+      m1 = (l1 + r1) / 2;
+      auto [a, b, c] = intervals[m1];
+      if (a >= cur_nxt || Check(i, a, c)) {
+        sentinel = a;
+        r1 = m1 - 1;
+      } else if (Check(i, b, c)) {
+        l2 = a, r2 = std::min(cur_nxt, b);
+        while (l2 <= r2) {
+          m2 = (l2 + r2) / 2;
+          if (Check(i, m2, c)) {
+            sentinel = m2;
+            r2 = m2 - 1;
           } else {
-            Visit(tl, x - 1, pl, pr);
-            Visit(x + 1, tr, pl, pr);
+            l2 = m2 + 1;
           }
         }
-      };
+        break;
+      } else {
+        l1 = m1 + 1;
+      }
+    }
+    return sentinel;
+  };
 
-  auto HaveDependency = [&](size_t now, size_t nxt) {
-    return parlay::any_of(parlay::iota(nxt - now - 1), [&](size_t i) {
-      i += now + 1;
-      return Go(i, nxt) < E[nxt];
+  struct entry {
+    using key_t = pair<size_t, size_t>;
+    using val_t = size_t;
+    static inline bool comp(key_t a, key_t b) { return a < b; }
+  };
+
+  using map_t = pam_map<entry>;
+  using node_t = typename map_t::Tree::node;
+
+  std::function<node_t*(size_t, size_t, size_t, size_t)> FindIntervals =
+      [&](size_t jl, size_t jr, size_t il, size_t ir) -> node_t* {
+    if (il > ir) return nullptr;
+    if (jl == jr) {
+      return map_t::Tree::join(nullptr, {{il, ir}, jl}, nullptr);
+    }
+    size_t im = (il + ir) / 2;
+    auto a = parlay::delayed_seq<T>(jr - jl + 1, [&](size_t j) {
+      j += jl;
+      return Go(j, im);
     });
+    size_t j0 = parlay::min_element(a) - a.begin() + jl;
+    bool parallel = jr - jl > granularity || ir - il > granularity;
+    node_t *lt, *rt;
+    conditional_par_do(
+        parallel, [&]() { lt = FindIntervals(jl, j0, il, im - 1); },
+        [&]() { rt = FindIntervals(j0, jr, im + 1, ir); });
+    return map_t::Tree::join(lt, {{im, im}, j0}, rt);
   };
 
-  std::function<void(size_t, size_t, size_t, size_t, size_t, size_t)> Update =
-      [&](size_t tl, size_t tr, size_t bl, size_t br, size_t pl, size_t pr) {
-        if (tl > tr) return;
-        if (tr < pl || tl > pr) return;
-        size_t x = (tl + tr) / 2;
-        Pushdown(x, tl, tr);
-        if (x < pl) {
-          Update(x + 1, tr, bl, br, pl, pr);
-        } else if (x > pr) {
-          Update(tl, x - 1, bl, br, pl, pr);
-        } else if (bl == br) {
-          if (Go(bl, x) < Go(best[x], x)) {
-            best[x] = bl;
-            if (x < tr) {
-              size_t y = (x + 1 + tr) / 2;
-              best[y] = tag[y] = bl;
-            }
-            Update(tl, x - 1, bl, br, pl, pr);
-          } else {
-            Update(x + 1, tr, bl, br, pl, pr);
-          }
-        } else {
-          auto a = parlay::iota(br - bl + 1);
-          auto it = parlay::min_element(a, [&](size_t i, size_t j) {
-            i += bl, j += bl;
-            return Go(i, x) < Go(j, x);
-          });
-          auto i = it - a.begin() + bl;
-          if (Go(i, x) < Go(best[x], x)) {
-            best[x] = i;
-            if (br - bl > granuality && pr - pl > granuality) {
-              parlay::parallel_do([&]() { Update(tl, x - 1, bl, i, pl, pr); },
-                                  [&]() { Update(x + 1, tr, i, br, pl, pr); });
-            } else {
-              Update(tl, x - 1, bl, i, pl, pr);
-              Update(x + 1, tr, i, br, pl, pr);
-            }
-          } else {
-            Update(x + 1, tr, bl, br, pl, pr);
-          }
+  parlay::sequence<std::array<size_t, 3>> tmp(n + 1);
+  parlay::sequence<pair<size_t, size_t>> rec(n + 1);
+
+  auto GetNewIntervals = [&](size_t now, size_t to) {
+    auto root = FindIntervals(now + 1, to, to + 1, n);
+    size_t k = map_t::Tree::size(root);
+    assert(k <= n);
+    map_t::Tree::foreach_index(root, 0, [&](auto et, size_t i) {
+      tmp[i][0] = et.first.first;
+      tmp[i][1] = et.first.second;
+      tmp[i][2] = et.second;
+    });
+    parlay::parallel_for(now + 1, to + 1,
+                         [&](size_t i) { rec[i].first = rec[i].second = inf; });
+    parlay::parallel_for(0, k, [&](size_t i) {
+      if (i == 0 || tmp[i][2] != tmp[i - 1][2]) {
+        rec[tmp[i][2]].first = tmp[i][0];
+      }
+      if (i == k - 1 || tmp[i][2] != tmp[i + 1][2]) {
+        rec[tmp[i][2]].second = tmp[i][1];
+      }
+    });
+    auto a = parlay::delayed_seq<size_t>(to - now,
+                                         [&](size_t i) { return i + now + 1; });
+    intervals = parlay::map(a, [&](size_t i) -> std::array<size_t, 3> {
+      return {rec[i].first, rec[i].second, i};
+    });
+    intervals = parlay::filter(intervals, [&](auto& x) { return x[0] != inf; });
+  };
+
+  parlay::sequence<std::atomic<size_t>> minv(n + 1), maxv(n + 1);
+  auto less = [&](size_t x, size_t y) { return x < y; };
+
+  std::function<void(size_t, size_t, size_t, size_t)> FindIntervals_WriteMin =
+      [&](size_t jl, size_t jr, size_t il, size_t ir) {
+        if (il > ir) return;
+        if (jl == jr) {
+          parlay::write_min(&minv[jl], il, less);
+          parlay::write_max(&maxv[jl], ir, less);
+          return;
         }
+        size_t im = (il + ir) / 2;
+        auto a = parlay::delayed_seq<T>(jr - jl + 1, [&](size_t j) {
+          j += jl;
+          return Go(j, im);
+        });
+        size_t j0 = parlay::min_element(a) - a.begin() + jl;
+        parlay::write_min(&minv[j0], im, less);
+        parlay::write_max(&maxv[j0], im, less);
+        bool parallel = jr - jl > granularity && ir - il > granularity;
+        conditional_par_do(
+            parallel, [&]() { FindIntervals_WriteMin(jl, j0, il, im - 1); },
+            [&]() { FindIntervals_WriteMin(j0, jr, im + 1, ir); });
       };
+
+  auto GetNewIntervals_WriteMin = [&](size_t now, size_t to) {
+    parlay::parallel_for(now + 1, to + 1, [&](size_t i) {
+      minv[i] = inf;
+      maxv[i] = 0;
+    });
+    FindIntervals_WriteMin(now + 1, to, to + 1, n);
+    auto a = parlay::delayed_seq<size_t>(to - now,
+                                         [&](size_t i) { return i + now + 1; });
+    intervals = parlay::map(a, [&](size_t i) -> std::array<size_t, 3> {
+      return {(size_t)minv[i], size_t(maxv[i]), i};
+    });
+    intervals = parlay::filter(intervals, [&](auto& x) { return x[0] != inf; });
+  };
 
   size_t now = 0;
   std::map<size_t, size_t> step;
   parlay::internal::timer t1("t1", false), t2("t2", false);
+  intervals.push_back({1, n, 0});
+  parlay::sequence<size_t> aa(n + 1);
   while (now < n) {
     t1.start();
-    size_t to = now;
-    while (to < n) {
-      size_t s = std::max(2 * (to - now), size_t(1));
-      size_t nxt = std::min(n, now + s);
-      Visit(1, n, to + 1, nxt);
-      if (HaveDependency(now, nxt)) break;
-      else to = nxt;
+    size_t s = 1;
+    size_t nxt = n + 1;
+    for (;;) {
+      size_t l = now + (size_t(1) << (s - 1));
+      size_t r = std::min(n, now + (size_t(1) << s) - 1);
+      parlay::parallel_for(0, r - l + 1,
+                           [&](size_t i) { aa[i] = FindSentinel(i + l, nxt); });
+      nxt = std::min(nxt, *parlay::min_element(aa.cut(0, r - l + 1)));
+      if (nxt <= r + 1) break;
+      s++;
     }
     t1.stop();
-    t2.start();
+    // std::cout << "now: " << now << ",  nxt: " << nxt << std::endl;
+    size_t to = nxt - 1;
     step[to - now]++;
-    Update(1, n, now + 1, to, to + 1, n);
-    // std::cout << "now: " << now << ", to: " << to << std::endl;
+    if (nxt > n) break;
+    t2.start();
+    // GetNewIntervals(now, to);
+    GetNewIntervals_WriteMin(now, to);
     now = to;
     t2.stop();
+    // std::cout << "intervals: ";
+    // for (auto [l, r, j] : intervals) {
+    //   std::cout << "(" << l << "," << r << "," << j << ")";
+    // }
+    // std::cout << std::endl;
   }
   t1.total();
   t2.total();
   size_t step_sum = 0;
   for (auto [step, cnt] : step) {
     step_sum += cnt;
-    std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
+    // std::cout << "step: " << step << ", cnt: " << cnt << std::endl;
   }
   std::cout << "step_sum: " << step_sum << std::endl;
+  // std::cout << "best: ";
+  // for (size_t i = 1; i <= n; i++) std::cout << best[i] << ' ';
+  // std::cout << std::endl;
   // std::cout << "E: ";
   // for (size_t i = 1; i <= n; i++) std::cout << E[i] << ' ';
   // std::cout << std::endl;
-  std::cout << "ConvexDPParallel end" << std::endl;
+  std::cout << "ConvexDPNew2 end" << std::endl;
   return best;
 }
-
-#endif  // CONVEX_DP_PARALLEL_H_

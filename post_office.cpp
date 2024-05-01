@@ -3,8 +3,6 @@
 
 #include "brute_force_dp.h"
 #include "config.h"
-#include "convex_dp_new.h"
-#include "convex_dp_new2.h"
 #include "convex_dp_parallel.h"
 #include "convex_dp_sequential.h"
 #include "gflags/gflags.h"
@@ -21,7 +19,7 @@ using real = long double;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(range, 100, "range");
 DEFINE_double(cost, 10, "cost");
-DEFINE_string(run, "par,new1,new2", "bf, seq, par, new1, new2");
+DEFINE_string(run, "seq,par", "bf, seq, par");
 
 auto MakeData(size_t n) {
   parlay::sequence<real> x(n + 1);
@@ -90,18 +88,6 @@ int main(int argc, char** argv) {
     E3.resize(n + 1);
     best = ConvexDPParallel(n, E3, f, w);
     tm.next("parallel");
-  }
-
-  if (FLAGS_run.find("new1") != string::npos) {
-    E4.resize(n + 1);
-    ConvexDPNew(n, E4, f, w);
-    tm.next("new1");
-  }
-
-  if (FLAGS_run.find("new2") != string::npos) {
-    E5.resize(n + 1);
-    best = ConvexDPNew2(n, E5, f, w);
-    tm.next("new2");
   }
 
   size_t k = 0, t = n;

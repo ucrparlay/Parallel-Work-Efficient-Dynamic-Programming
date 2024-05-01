@@ -11,7 +11,7 @@ using namespace std;
 DEFINE_uint64(n, 10, "n");
 DEFINE_uint64(m, 40, "# of arrows");
 DEFINE_uint64(k, 5, "LCS");
-DEFINE_string(run, "bf,par,seq", "bf, par, seq");
+DEFINE_string(run, "par,seq", "bf, par, seq");
 
 auto MakeRandom(size_t n) {
   parlay::sequence<size_t> a(n + 1), b(n + 1);

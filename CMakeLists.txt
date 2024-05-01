@@ -13,9 +13,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 enable_testing()
+add_subdirectory(glog)
 add_subdirectory(googletest)
 add_subdirectory(gflags)
-add_subdirectory(glog)
 add_subdirectory(parlaylib)
 
 add_compile_options(
